@@ -1,0 +1,144 @@
+App: Plain-Language Doc Explainer (Legal & Medical)
+
+Goal:
+Upload a legal or medical document (PDF/image/docx), then get a plain-language explanation in the user’s preferred language. The app highlights key sections, defines jargon, summarizes clauses/findings, and answers follow-up questions.
+
+Core Features (MVP)
+
+Upload & OCR
+
+Accept PDF, DOCX, TXT, PNG/JPG.
+
+Use OCR for scanned PDFs/images.
+
+Smart Parsing
+
+Split long docs into sections/clauses (headings, pages, tables).
+
+Preserve key structure: titles, numbered clauses, bullet lists.
+
+Plain-Language Summary
+
+Generate a concise, 6th–8th grade reading-level summary.
+
+Extract and explain terms, dates, parties, obligations, risks, deadlines, medications, dosages, diagnoses, procedures (as applicable).
+
+Definitions & Jargon Buster
+
+Inline tooltips for technical terms with friendly definitions.
+
+Q&A Chat
+
+Ask questions about the uploaded document; answers show citations (page/section).
+
+Multilingual
+
+UI language switcher; output summaries/Q&A in selected language (default English). Auto-detect doc language.
+
+Safety + Disclaimers
+
+Prominent banner: “Not medical or legal advice. For information only.”
+
+Encourage consulting a licensed professional for decisions.
+
+Privacy
+
+Process files in-memory or temporary storage; show a “Delete file” button; auto-delete after session ends.
+
+Nice-to-Have (Stretch)
+
+Section Compare: Highlight differences between two versions (e.g., contract v1 vs v2).
+
+Table/Chart Reader: Extract tabular data into readable lists.
+
+Risk Flags: Detect red-flag clauses (auto-renewal, arbitration, fee schedules, PHI handling).
+
+Export: Download summary + glossary + Q&A as PDF/Docx.
+
+Bookmarks: Save important sections for quick return.
+
+Voice Mode: Read summaries aloud.
+
+Tech Stack (suggested)
+
+Frontend: React + Tailwind.
+
+Backend: Node/Express (or Python FastAPI).
+
+OCR: Tesseract or OCR.space/Google Vision (if allowed).
+
+LLM: Connect to an LLM API for:
+
+chunked summarization
+
+definition extraction
+
+multilingual translation
+
+retrieval-augmented Q&A with citations
+
+Storage: In-memory for MVP; optional temporary object storage with auto-expiry.
+
+Auth (optional): Passwordless email magic link or social login.
+
+UX Flow
+
+Landing: Upload doc → choose output language → accept disclaimer.
+
+Processing: OCR (if needed) → chunk → analyze.
+
+Results Dashboard (3 tabs):
+
+Summary: Plain-language overview with section list & expanders.
+
+Glossary: Terms/definitions; clickable highlights in text.
+
+Q&A: Chat panel; answers show “Source: Page X / Section Y”.
+
+Actions: “Translate summary,” “Download report,” “Delete file.”
+
+Prompts (LLM)
+
+Summarize (per chunk):
+“You are a patient/client-friendly explainer. Rewrite the following {domain} text in plain language at a 6th–8th grade level. Keep it accurate and neutral. List key points, obligations, dates, risks, and next steps. Do not give legal or medical advice. Output in {target_language}. Text: {chunk}”
+
+Glossary:
+“Extract up to 25 technical terms from the document and define them simply in {target_language}. Return JSON: [{term, definition, page_refs:[...]}].”
+
+Q&A with Citations:
+“Answer the question based only on the provided chunks. Cite page/section IDs for every claim. If unknown, say you don’t know. Output in {target_language}. Question: {q}. Chunks: {retrieved_chunks_with_ids}.”
+
+Retrieval/Citations
+
+Chunk with IDs (e.g., p3_s2).
+
+Embed chunks, do similarity search for Q&A.
+
+Show citations as badges (e.g., “p3 s2”).
+
+Security & Compliance
+
+Show non-advice banner on every page.
+
+No persistent storage by default; Delete button; auto-purge on session end.
+
+If logs are kept for debugging, redact PHI/PII and allow user opt-out.
+
+Acceptance Criteria (MVP)
+
+Upload a 10-page legal PDF → get a 1–2 page plain summary in English with at least 5 citations.
+
+Upload a scanned doctor’s visit summary (image/PDF) → OCR works; glossary ≥10 terms; multilingual output (e.g., Spanish).
+
+Q&A returns answers with source references or “don’t know.”
+
+Delete file removes content from storage and UI.
+
+UI Copy Snippets
+
+Disclaimer banner:
+“This tool provides plain-language explanations for informational purposes only and is not legal or medical advice. Consult a licensed professional for guidance.”
+
+Language selector label: “Explain in: [English ▼]”
+
+Empty state: “Upload a legal or medical document to begin.”
