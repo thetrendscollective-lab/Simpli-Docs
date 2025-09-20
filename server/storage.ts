@@ -55,6 +55,11 @@ export class MemStorage implements IStorage {
     const document: Document = { 
       ...doc, 
       id,
+      summary: doc.summary ?? null,
+      glossary: doc.glossary ?? null,
+      language: doc.language ?? null,
+      originalText: doc.originalText ?? null,
+      processedSections: doc.processedSections ?? null,
       createdAt: now,
       updatedAt: now
     };
@@ -94,6 +99,8 @@ export class MemStorage implements IStorage {
     const interaction: QAInteraction = {
       ...qa,
       id,
+      documentId: qa.documentId ?? null,
+      citations: qa.citations ?? null,
       createdAt: new Date()
     };
     this.qaInteractions.set(id, interaction);

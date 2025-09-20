@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import Tooltip from "./Tooltip";
+import Tooltip from "@/components/Tooltip";
 
 interface SummaryTabProps {
   documentId: string;

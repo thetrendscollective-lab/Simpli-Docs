@@ -2,23 +2,13 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { type QAInteraction } from "@shared/schema";
 
 interface QASidebarProps {
   documentId: string;
   language: string;
 }
 
-interface QAInteraction {
-  id: string;
-  question: string;
-  answer: string;
-  citations: Array<{
-    pageNumber: number;
-    sectionId: string;
-    text: string;
-  }>;
-  createdAt: string;
-}
 
 interface QAResult {
   answer: string;
@@ -35,7 +25,7 @@ export default function QASidebar({ documentId, language }: QASidebarProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: qaHistory = [], isLoading } = useQuery({
+  const { data: qaHistory = [], isLoading } = useQuery<QAInteraction[]>({
     queryKey: ["/api/documents", documentId, "qa"],
     enabled: !!documentId,
   });
@@ -104,9 +94,9 @@ export default function QASidebar({ documentId, language }: QASidebarProps) {
             </div>
             <div className="bg-muted rounded-lg p-3">
               <p className="text-sm text-foreground mb-2">{qa.answer}</p>
-              {qa.citations && qa.citations.length > 0 && (
+              {Array.isArray(qa.citations) && qa.citations.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {qa.citations.map((citation, citIndex) => (
+                  {qa.citations.map((citation: any, citIndex: number) => (
                     <span 
                       key={citIndex}
                       className="inline-block bg-primary/20 text-primary text-xs px-2 py-1 rounded"

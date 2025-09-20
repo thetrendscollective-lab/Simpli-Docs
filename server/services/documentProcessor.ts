@@ -1,6 +1,7 @@
 import { ProcessedSection, GlossaryTerm } from "@shared/schema";
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import mammoth from 'mammoth';
+import { getErrorMessage } from "../utils";
 
 export class DocumentProcessor {
   async extractTextFromPDF(buffer: Buffer): Promise<{ text: string; pageCount: number }> {
@@ -20,7 +21,7 @@ export class DocumentProcessor {
 
       return { text, pageCount };
     } catch (error) {
-      throw new Error(`Failed to extract text from PDF: ${error.message}`);
+      throw new Error(`Failed to extract text from PDF: ${getErrorMessage(error)}`);
     }
   }
 
@@ -29,7 +30,7 @@ export class DocumentProcessor {
       const result = await mammoth.extractRawText({ buffer });
       return result.value;
     } catch (error) {
-      throw new Error(`Failed to extract text from DOCX: ${error.message}`);
+      throw new Error(`Failed to extract text from DOCX: ${getErrorMessage(error)}`);
     }
   }
 

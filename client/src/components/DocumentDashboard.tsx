@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import TabNavigation from "./TabNavigation";
-import SummaryTab from "./SummaryTab";
-import GlossaryTab from "./GlossaryTab";
-import OriginalTextTab from "./OriginalTextTab";
-import QASidebar from "./QASidebar";
+import { type Document } from "@shared/schema";
+import TabNavigation from "@/components/TabNavigation";
+import SummaryTab from "@/components/SummaryTab";
+import GlossaryTab from "@/components/GlossaryTab";
+import OriginalTextTab from "@/components/OriginalTextTab";
+import QASidebar from "@/components/QASidebar";
 
 interface DocumentDashboardProps {
   documentId: string;
@@ -17,7 +18,7 @@ export default function DocumentDashboard({ documentId, language, onDelete }: Do
   const [activeTab, setActiveTab] = useState<"summary" | "glossary" | "original">("summary");
   const { toast } = useToast();
 
-  const { data: document, isLoading } = useQuery({
+  const { data: document, isLoading } = useQuery<Document>({
     queryKey: ["/api/documents", documentId],
     enabled: !!documentId,
   });
@@ -92,7 +93,7 @@ export default function DocumentDashboard({ documentId, language, onDelete }: Do
     return 'fas fa-file text-muted-foreground';
   };
 
-  const pageCount = document.processedSections?.reduce((max: number, section: any) => 
+  const pageCount = (document.processedSections as any[] | null)?.reduce((max: number, section: any) => 
     Math.max(max, ...section.pageNumbers), 0
   ) || 1;
 
@@ -112,7 +113,7 @@ export default function DocumentDashboard({ documentId, language, onDelete }: Do
                   {document.filename}
                 </h4>
                 <p className="text-sm text-muted-foreground" data-testid="text-file-details">
-                  {formatFileSize(document.fileSize)} • {pageCount} pages • Processed {new Date(document.createdAt).toLocaleString()}
+                  {formatFileSize(document.fileSize)} • {pageCount} pages • Processed {document.createdAt ? new Date(document.createdAt).toLocaleString() : 'Unknown'}
                 </p>
               </div>
             </div>
@@ -147,7 +148,10 @@ export default function DocumentDashboard({ documentId, language, onDelete }: Do
               <GlossaryTab documentId={documentId} language={language} />
             )}
             {activeTab === "original" && (
-              <OriginalTextTab document={document} />
+              <OriginalTextTab document={{
+                originalText: document.originalText || undefined,
+                processedSections: document.processedSections as any[] || undefined
+              }} />
             )}
           </div>
         </div>
