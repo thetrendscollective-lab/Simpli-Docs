@@ -1,5 +1,5 @@
 import { ProcessedSection, GlossaryTerm } from "@shared/schema";
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import mammoth from 'mammoth';
 
 export class DocumentProcessor {
