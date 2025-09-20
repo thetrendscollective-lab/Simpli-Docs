@@ -13,6 +13,13 @@ export interface IStorage {
   updateDocument(id: string, updates: Partial<Document>): Promise<Document | undefined>;
   deleteDocument(id: string): Promise<boolean>;
   
+  // Payment methods
+  updateDocumentPayment(id: string, paymentData: {
+    stripePaymentIntentId?: string;
+    paymentAmount?: number;
+    paymentStatus?: string;
+  }): Promise<Document | undefined>;
+  
   // QA methods
   createQA(qa: InsertQA): Promise<QAInteraction>;
   getQAByDocument(documentId: string): Promise<QAInteraction[]>;
@@ -60,6 +67,10 @@ export class MemStorage implements IStorage {
       language: doc.language ?? null,
       originalText: doc.originalText ?? null,
       processedSections: doc.processedSections ?? null,
+      pageCount: doc.pageCount ?? 1,
+      paymentAmount: doc.paymentAmount ?? null,
+      paymentStatus: doc.paymentStatus ?? null,
+      stripePaymentIntentId: doc.stripePaymentIntentId ?? null,
       createdAt: now,
       updatedAt: now
     };
@@ -111,6 +122,14 @@ export class MemStorage implements IStorage {
     return Array.from(this.qaInteractions.values()).filter(
       qa => qa.documentId === documentId
     );
+  }
+
+  async updateDocumentPayment(id: string, paymentData: {
+    stripePaymentIntentId?: string;
+    paymentAmount?: number;
+    paymentStatus?: string;
+  }): Promise<Document | undefined> {
+    return this.updateDocument(id, paymentData);
   }
 
   async cleanupSession(sessionId: string): Promise<void> {

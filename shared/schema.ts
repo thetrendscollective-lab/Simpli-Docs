@@ -20,6 +20,10 @@ export const documents = pgTable("documents", {
   summary: text("summary"),
   glossary: jsonb("glossary"),
   language: text("language").default("en"),
+  pageCount: integer("page_count").default(1),
+  paymentAmount: integer("payment_amount"), // Amount in cents
+  paymentStatus: text("payment_status").default("pending"), // pending, paid, failed
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });

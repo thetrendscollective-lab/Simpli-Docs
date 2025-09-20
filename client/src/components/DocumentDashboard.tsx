@@ -7,6 +7,7 @@ import SummaryTab from "@/components/SummaryTab";
 import GlossaryTab from "@/components/GlossaryTab";
 import OriginalTextTab from "@/components/OriginalTextTab";
 import QASidebar from "@/components/QASidebar";
+import PaymentFlow from "@/components/PaymentFlow";
 
 interface DocumentDashboardProps {
   documentId: string;
@@ -93,9 +94,22 @@ export default function DocumentDashboard({ documentId, language, onDelete }: Do
     return 'fas fa-file text-muted-foreground';
   };
 
-  const pageCount = (document.processedSections as any[] | null)?.reduce((max: number, section: any) => 
-    Math.max(max, ...section.pageNumbers), 0
-  ) || 1;
+  const pageCount = document.pageCount || 1;
+
+  // Show payment flow if payment is pending
+  if (document.paymentStatus === "pending") {
+    return (
+      <PaymentFlow
+        documentId={documentId}
+        filename={document.filename}
+        pageCount={pageCount}
+        onPaymentSuccess={() => {
+          // Reload the document data after successful payment
+          window.location.reload();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
