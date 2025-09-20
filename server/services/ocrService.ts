@@ -25,11 +25,11 @@ export class OCRService {
   async extractTextFromScannedPDF(buffer: Buffer): Promise<string> {
     // For PDFs that might be scanned images, we would need to convert
     // PDF pages to images first, then OCR each page
-    // This is a simplified implementation
+    // This is a placeholder implementation for now
     try {
-      // In a real implementation, you'd use pdf2pic or similar
-      // to convert PDF pages to images, then OCR each image
-      return await this.extractTextFromImage(buffer, 'application/pdf');
+      // TODO: Implement PDF to image conversion using pdf2pic or similar
+      // For now, return a message indicating OCR is not available for PDFs
+      throw new Error('OCR for scanned PDFs requires additional setup. Please ensure the PDF contains extractable text or try uploading as an image (PNG/JPG).');
     } catch (error) {
       throw new Error(`Failed to extract text from scanned PDF: ${getErrorMessage(error)}`);
     }
