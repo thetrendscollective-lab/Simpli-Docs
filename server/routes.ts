@@ -1,13 +1,21 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
+import Stripe from "stripe";
 import { storage } from "./storage";
 import { OpenAIService } from "./services/openai";
 import { DocumentProcessor } from "./services/documentProcessor";
 import { OCRService } from "./services/ocrService";
 import { insertDocumentSchema, insertQASchema } from "@shared/schema";
+import { calculateDocumentPrice } from "@shared/pricing";
 import { randomUUID } from "crypto";
 import { getErrorMessage } from "./utils";
+
+// Initialize Stripe - Referenced from javascript_stripe integration
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Configure multer for file uploads
 const upload = multer({
@@ -91,8 +99,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process document sections
       const sections = documentProcessor.parseDocumentSections(extractedText);
       const documentType = documentProcessor.detectDocumentType(extractedText);
+      
+      // Calculate page count from sections
+      const pageCount = Math.max(1, sections.reduce((max, section) => 
+        Math.max(max, ...section.pageNumbers), 1
+      ));
 
-      // Create document record
+      // Calculate pricing for this document
+      const pricing = calculateDocumentPrice(pageCount);
+
+      // Create document record with payment info
       const documentData = insertDocumentSchema.parse({
         sessionId,
         filename: originalname,
@@ -100,7 +116,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fileSize: size,
         originalText: extractedText,
         processedSections: sections,
-        language
+        language,
+        pageCount,
+        paymentAmount: pricing.totalCents,
+        paymentStatus: "pending"
       });
 
       const document = await storage.createDocument(documentData);
@@ -109,10 +128,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         documentId: document.id,
         filename: originalname,
         fileSize: size,
-        pageCount: sections.reduce((max, section) => 
-          Math.max(max, ...section.pageNumbers), 0
-        ),
+        pageCount,
         documentType,
+        pricing: {
+          basePrice: pricing.basePrice,
+          perPagePrice: pricing.perPagePrice,
+          totalPrice: pricing.totalPrice,
+          totalCents: pricing.totalCents
+        },
         sections: sections.map(s => ({
           id: s.id,
           title: s.title,
@@ -138,6 +161,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const document = await storage.getDocument(id);
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Check payment status before allowing processing
+      if (document.paymentStatus !== "paid") {
+        return res.status(402).json({ 
+          error: "Payment required", 
+          message: "Please complete payment to access document processing features",
+          paymentStatus: document.paymentStatus 
+        });
       }
 
       if (!document.originalText) {
@@ -175,6 +207,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Document not found" });
       }
 
+      // Check payment status before allowing processing
+      if (document.paymentStatus !== "paid") {
+        return res.status(402).json({ 
+          error: "Payment required", 
+          message: "Please complete payment to access document processing features",
+          paymentStatus: document.paymentStatus 
+        });
+      }
+
       if (!document.originalText) {
         return res.status(400).json({ error: "No text available for glossary extraction" });
       }
@@ -210,6 +251,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const document = await storage.getDocument(id);
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Check payment status before allowing processing
+      if (document.paymentStatus !== "paid") {
+        return res.status(402).json({ 
+          error: "Payment required", 
+          message: "Please complete payment to access document processing features",
+          paymentStatus: document.paymentStatus 
+        });
       }
 
       if (!document.processedSections) {
@@ -299,6 +349,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error cleaning up session:", error);
       res.status(500).json({ error: "Failed to cleanup session" });
+    }
+  });
+
+  // Stripe payment route for one-time payments - Referenced from javascript_stripe integration
+  app.post("/api/create-payment-intent", async (req, res) => {
+    try {
+      const { documentId } = req.body;
+      
+      if (!documentId) {
+        return res.status(400).json({ error: "Document ID is required" });
+      }
+
+      // Get document to verify payment amount server-side
+      const document = await storage.getDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (!document.paymentAmount) {
+        return res.status(400).json({ error: "Payment amount not calculated for document" });
+      }
+
+      // Create payment intent with server-side calculated amount
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: document.paymentAmount, // Already in cents from upload
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          documentId: documentId
+        }
+      });
+
+      // Update document with payment intent ID
+      await storage.updateDocumentPayment(documentId, {
+        stripePaymentIntentId: paymentIntent.id,
+        paymentStatus: "pending"
+      });
+
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ 
+        error: "Error creating payment intent: " + getErrorMessage(error) 
+      });
+    }
+  });
+
+  // Verify payment and enable document processing
+  app.post("/api/documents/:documentId/verify-payment", async (req, res) => {
+    try {
+      const { documentId } = req.params;
+      
+      const document = await storage.getDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (!document.stripePaymentIntentId) {
+        return res.status(400).json({ error: "No payment intent found for document" });
+      }
+
+      // Retrieve payment intent from Stripe to verify status
+      const paymentIntent = await stripe.paymentIntents.retrieve(document.stripePaymentIntentId);
+      
+      if (paymentIntent.status === "succeeded") {
+        // Update document payment status
+        await storage.updateDocumentPayment(documentId, {
+          paymentStatus: "paid"
+        });
+        
+        res.json({ 
+          paymentStatus: "paid",
+          message: "Payment verified successfully" 
+        });
+      } else {
+        res.json({ 
+          paymentStatus: paymentIntent.status,
+          message: "Payment not yet completed" 
+        });
+      }
+    } catch (error: any) {
+      console.error("Error verifying payment:", error);
+      res.status(500).json({ 
+        error: "Error verifying payment: " + getErrorMessage(error) 
+      });
     }
   });
 
