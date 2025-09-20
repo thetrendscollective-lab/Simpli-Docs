@@ -5,11 +5,27 @@ interface HeaderProps {
 
 export default function Header({ language, onLanguageChange }: HeaderProps) {
   const languages = [
-    { code: "en", name: "English" },
-    { code: "es", name: "Español" },
-    { code: "fr", name: "Français" },
-    { code: "de", name: "Deutsch" },
-    { code: "zh", name: "中文" },
+    { code: "en", name: "English", native: "English" },
+    { code: "es", name: "Spanish", native: "Español" },
+    { code: "fr", name: "French", native: "Français" },
+    { code: "de", name: "German", native: "Deutsch" },
+    { code: "it", name: "Italian", native: "Italiano" },
+    { code: "pt", name: "Portuguese", native: "Português" },
+    { code: "ru", name: "Russian", native: "Русский" },
+    { code: "zh-CN", name: "Chinese (Simplified)", native: "简体中文" },
+    { code: "zh-TW", name: "Chinese (Traditional)", native: "繁體中文" },
+    { code: "ja", name: "Japanese", native: "日本語" },
+    { code: "ko", name: "Korean", native: "한국어" },
+    { code: "ar", name: "Arabic", native: "العربية" },
+    { code: "hi", name: "Hindi", native: "हिन्दी" },
+    { code: "pa", name: "Punjabi", native: "ਪੰਜਾਬੀ" },
+    { code: "ur", name: "Urdu", native: "اردو" },
+    { code: "bn", name: "Bengali", native: "বাংলা" },
+    { code: "tr", name: "Turkish", native: "Türkçe" },
+    { code: "vi", name: "Vietnamese", native: "Tiếng Việt" },
+    { code: "th", name: "Thai", native: "ไทย" },
+    { code: "fil", name: "Tagalog / Filipino", native: "Filipino" },
+    { code: "sw", name: "Swahili", native: "Kiswahili" }
   ];
 
   return (
@@ -31,7 +47,7 @@ export default function Header({ language, onLanguageChange }: HeaderProps) {
               >
                 {languages.map(lang => (
                   <option key={lang.code} value={lang.code}>
-                    {lang.name}
+                    {lang.native} - {lang.name}
                   </option>
                 ))}
               </select>
