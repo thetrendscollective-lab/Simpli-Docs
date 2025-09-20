@@ -7,6 +7,7 @@ import { DocumentProcessor } from "./services/documentProcessor";
 import { OCRService } from "./services/ocrService";
 import { insertDocumentSchema, insertQASchema } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { getErrorMessage } from "./utils";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -72,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           extractedText = result.text;
         } catch (error) {
           // If PDF text extraction fails, try OCR
-          console.warn("PDF text extraction failed, trying OCR:", error.message);
+          console.warn("PDF text extraction failed, trying OCR:", getErrorMessage(error));
           extractedText = await ocrService.extractTextFromScannedPDF(buffer);
         }
       } else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
@@ -123,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing document:", error);
       res.status(500).json({ 
-        error: error.message || "Failed to process document" 
+        error: getErrorMessage(error) || "Failed to process document" 
       });
     }
   });
@@ -158,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating summary:", error);
       res.status(500).json({ 
-        error: error.message || "Failed to generate summary" 
+        error: getErrorMessage(error) || "Failed to generate summary" 
       });
     }
   });
@@ -191,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating glossary:", error);
       res.status(500).json({ 
-        error: error.message || "Failed to generate glossary" 
+        error: getErrorMessage(error) || "Failed to generate glossary" 
       });
     }
   });
@@ -238,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error answering question:", error);
       res.status(500).json({ 
-        error: error.message || "Failed to answer question" 
+        error: getErrorMessage(error) || "Failed to answer question" 
       });
     }
   });

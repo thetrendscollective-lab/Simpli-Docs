@@ -1,4 +1,5 @@
 import Tesseract from 'tesseract.js';
+import { getErrorMessage } from "../utils";
 
 export class OCRService {
   async extractTextFromImage(buffer: Buffer, mimeType: string): Promise<string> {
@@ -17,7 +18,7 @@ export class OCRService {
 
       return text;
     } catch (error) {
-      throw new Error(`Failed to extract text from image: ${error.message}`);
+      throw new Error(`Failed to extract text from image: ${getErrorMessage(error)}`);
     }
   }
 
@@ -30,7 +31,7 @@ export class OCRService {
       // to convert PDF pages to images, then OCR each image
       return await this.extractTextFromImage(buffer, 'application/pdf');
     } catch (error) {
-      throw new Error(`Failed to extract text from scanned PDF: ${error.message}`);
+      throw new Error(`Failed to extract text from scanned PDF: ${getErrorMessage(error)}`);
     }
   }
 

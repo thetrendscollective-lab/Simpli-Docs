@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 interface FileUploadProps {
   sessionId: string;
@@ -92,7 +93,7 @@ export default function FileUpload({
       console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload document. Please try again.",
+        description: getErrorMessage(error) || "Failed to upload document. Please try again.",
         variant: "destructive"
       });
       onUploadComplete(""); // Reset to idle state

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/utils";
 
 export function useDocumentProcessor() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -35,7 +36,7 @@ export function useDocumentProcessor() {
     } catch (error) {
       toast({
         title: "Processing failed",
-        description: error.message || "Failed to process document. Please try again.",
+        description: getErrorMessage(error) || "Failed to process document. Please try again.",
         variant: "destructive"
       });
       throw error;

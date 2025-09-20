@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { getErrorMessage } from "../utils";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -59,7 +60,7 @@ Text: ${text}`;
 
       return JSON.parse(response.choices[0].message.content || '{}');
     } catch (error) {
-      throw new Error(`Failed to summarize document: ${error.message}`);
+      throw new Error(`Failed to summarize document: ${getErrorMessage(error)}`);
     }
   }
 
@@ -89,7 +90,7 @@ Text: ${text}`;
 
       return JSON.parse(response.choices[0].message.content || '{"terms": []}');
     } catch (error) {
-      throw new Error(`Failed to extract glossary: ${error.message}`);
+      throw new Error(`Failed to extract glossary: ${getErrorMessage(error)}`);
     }
   }
 
@@ -131,7 +132,7 @@ ${chunksText}`;
 
       return JSON.parse(response.choices[0].message.content || '{"answer": "I don\'t know", "citations": [], "confidence": 0}');
     } catch (error) {
-      throw new Error(`Failed to answer question: ${error.message}`);
+      throw new Error(`Failed to answer question: ${getErrorMessage(error)}`);
     }
   }
 
@@ -148,7 +149,7 @@ ${text}`;
 
       return response.choices[0].message.content || text;
     } catch (error) {
-      throw new Error(`Failed to translate text: ${error.message}`);
+      throw new Error(`Failed to translate text: ${getErrorMessage(error)}`);
     }
   }
 }
