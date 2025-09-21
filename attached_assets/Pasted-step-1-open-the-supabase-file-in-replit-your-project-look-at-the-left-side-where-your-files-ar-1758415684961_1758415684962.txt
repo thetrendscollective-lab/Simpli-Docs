@@ -1,0 +1,89 @@
+step 1 — open the supabase file
+
+in replit (your project), look at the left side where your files are.
+
+click this folder path: server → services → supa.ts
+
+this is the file we made earlier.
+
+inside that file, find the line that says:
+
+const supabase = createClient(
+
+
+change it to add the word export in front, like this:
+
+export const supabase = createClient(
+
+
+click Save (or press Ctrl+S).
+
+why? this lets other files use your supabase connection.
+
+step 2 — open your main server file
+
+in the files list, find server → index.ts (this is your “main” server file).
+
+if you don’t see index.ts, look for a file in server/ that mentions express() and app.listen(.... That’s the one.
+
+click it to open.
+
+step 3 — add the tiny test route
+
+we’re going to paste a tiny block that makes a test web page.
+
+at the top of the file (with your other imports), add this line:
+
+import { supabase } from "./services/supa";
+
+
+now, before the line that says app.listen(... (usually near the bottom), paste this whole block:
+
+// tiny test page: shows if supabase works
+app.get("/test-conn", async (req, res) => {
+  const { data, error } = await supabase
+    .from("docexplain.users")
+    .select("id, email, free_pages_remaining")
+    .limit(1);
+
+  if (error) {
+    // send the error so we can see what's wrong
+    return res.status(500).json({ message: "Supabase error", details: error.message });
+  }
+
+  // if it works but there are no users yet, you'll see []
+  return res.json(data);
+});
+
+
+click Save.
+
+step 4 — run the app
+
+click the big Run button at the top of replit.
+
+wait for it to say something like “Server running” in the console (the black box on the right/bottom).
+
+if you see a red error about @supabase/supabase-js not found:
+
+click the shell/console and type: npm i @supabase/supabase-js
+
+when it finishes, click Run again.
+
+if it says environment variables not found:
+
+make sure you added SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Tools → Secrets
+
+then click Run again.
+
+step 5 — open the test page
+
+in replit, click “Open in new tab” (it’s the little arrow/box near the top-right of the preview).
+
+you’ll see your app’s link. click it.
+
+in the browser address bar, add /test-conn to the end of the link and press Enter.
+
+it will look like:
+
+https://your-app-name.replit.app/test-conn

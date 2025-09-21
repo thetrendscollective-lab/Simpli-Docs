@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { supabase } from "./services/supa";
 
 const app = express();
 app.use(express.json());
@@ -38,6 +39,22 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // tiny test page: shows if supabase works
+  app.get("/test-conn", async (req, res) => {
+    const { data, error } = await supabase
+      .from("docexplain.users")
+      .select("id, email, free_pages_remaining")
+      .limit(1);
+
+    if (error) {
+      // send the error so we can see what's wrong
+      return res.status(500).json({ message: "Supabase error", details: error.message });
+    }
+
+    // if it works but there are no users yet, you'll see []
+    return res.json(data);
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
