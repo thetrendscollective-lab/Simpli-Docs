@@ -157,10 +157,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { language = 'en' } = req.body;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
 
       const document = await storage.getDocument(id);
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify session ownership
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
       }
 
       // Check payment status before allowing processing
@@ -201,10 +211,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { language = 'en' } = req.body;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
 
       const document = await storage.getDocument(id);
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify session ownership
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
       }
 
       // Check payment status before allowing processing
@@ -243,14 +263,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { question, language = 'en' } = req.body;
+      const sessionId = req.headers['x-session-id'] as string;
 
       if (!question?.trim()) {
         return res.status(400).json({ error: "Question is required" });
       }
 
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
       const document = await storage.getDocument(id);
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify session ownership
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
       }
 
       // Check payment status before allowing processing
@@ -298,10 +328,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/documents/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
       const document = await storage.getDocument(id);
       
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify session ownership
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
       }
 
       res.json(document);
@@ -315,6 +356,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/documents/:id/qa", async (req, res) => {
     try {
       const { id } = req.params;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      // Verify document exists and session ownership
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify session ownership
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
+      }
+
       const qaHistory = await storage.getQAByDocument(id);
       res.json(qaHistory);
     } catch (error) {
@@ -327,10 +385,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/documents/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify session ownership
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
+      }
+
       const success = await storage.deleteDocument(id);
       
       if (!success) {
-        return res.status(404).json({ error: "Document not found" });
+        return res.status(500).json({ error: "Failed to delete document" });
       }
 
       res.json({ success: true });
@@ -356,15 +431,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/create-payment-intent", async (req, res) => {
     try {
       const { documentId } = req.body;
+      const sessionId = req.headers['x-session-id'] as string;
       
       if (!documentId) {
         return res.status(400).json({ error: "Document ID is required" });
       }
 
-      // Get document to verify payment amount server-side
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      // Get document to verify payment amount server-side and session ownership
       const document = await storage.getDocument(documentId);
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify session ownership
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
       }
 
       if (!document.paymentAmount) {
@@ -379,7 +464,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           enabled: true,
         },
         metadata: {
-          documentId: documentId
+          documentId: documentId,
+          sessionId: sessionId
         }
       });
 
@@ -402,10 +488,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/documents/:documentId/verify-payment", async (req, res) => {
     try {
       const { documentId } = req.params;
+      const sessionId = req.headers['x-session-id'] as string;
       
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
       const document = await storage.getDocument(documentId);
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify session ownership
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
       }
 
       if (!document.stripePaymentIntentId) {
@@ -415,8 +511,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Retrieve payment intent from Stripe to verify status
       const paymentIntent = await stripe.paymentIntents.retrieve(document.stripePaymentIntentId);
       
+      // Validate payment intent metadata matches document
+      if (paymentIntent.metadata.documentId !== documentId) {
+        return res.status(400).json({ error: "Payment intent does not match document" });
+      }
+
+      // Validate session matches to prevent cross-session reuse
+      if (paymentIntent.metadata.sessionId !== sessionId) {
+        return res.status(400).json({ error: "Payment intent session mismatch" });
+      }
+
+      // Validate amount and currency matches (prevent payment intent reuse)
+      if (paymentIntent.amount !== document.paymentAmount) {
+        return res.status(400).json({ error: "Payment amount mismatch" });
+      }
+
+      if (paymentIntent.currency !== "usd") {
+        return res.status(400).json({ error: "Payment currency mismatch" });
+      }
+
       if (paymentIntent.status === "succeeded") {
-        // Update document payment status
+        // Update document payment status (idempotent)
         await storage.updateDocumentPayment(documentId, {
           paymentStatus: "paid"
         });

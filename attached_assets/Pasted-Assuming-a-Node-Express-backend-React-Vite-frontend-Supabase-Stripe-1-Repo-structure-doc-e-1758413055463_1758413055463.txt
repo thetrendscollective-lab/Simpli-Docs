@@ -1,0 +1,172 @@
+Assuming a Node/Express backend + React (Vite) frontend + Supabase/Stripe:
+
+1) Repo structure
+/doc-explain
+  /server
+    index.ts
+    routes/
+      auth.ts
+      upload.ts
+      explain.ts
+      usage.ts
+      stripe-webhooks.ts
+    services/
+      llm.ts
+      parser.ts
+      storage.ts
+      usage.ts
+    db/
+      schema.sql
+  /web
+    index.html
+    src/
+      main.tsx
+      App.tsx
+      components/
+        Uploader.tsx
+        ExplainControls.tsx
+        Highlights.tsx
+        Pricing.tsx
+        Account.tsx
+      pages/
+        Home.tsx
+        Dashboard.tsx
+        Billing.tsx
+    vite.config.ts
+  package.json
+  .replit
+  replit.nix (if you’re using Nix)
+
+2) Secrets to add in Replit (Secrets tab)
+
+OPENAI_API_KEY (or Claude if using Anthropic)
+
+STRIPE_SECRET_KEY
+
+STRIPE_WEBHOOK_SECRET (after creating endpoint)
+
+SUPABASE_URL
+
+SUPABASE_SERVICE_ROLE_KEY
+
+JWT_SECRET (for your own sessions if not using Supabase Auth)
+
+Optional: POSTHOG_KEY or SENTRY_DSN for analytics/errors
+
+3) Storage + parsing
+
+Supabase: create a bucket docs.
+
+Store original file; store extracted text (JSON with {page, text}) to speed re-explains.
+
+Parsing: use pdf-parse for PDF, docx for .docx, fallback to mammoth or server-side LibreOffice if needed (start with PDF/DOCX/TXT for MVP).
+
+4) Usage metering
+
+Table usage:
+
+usage(id uuid, user_id, period_start, period_end, pages_used int, docs_used int)
+
+
+Increment pages_used after parse; enforce limits by plan.
+
+5) LLM service (server/services/llm.ts)
+
+System prompt sets tone: friendly, plain-language, cite page numbers.
+
+Inputs: extracted text (chunked), chosen reading level, mode (Healthcare/Legal/etc.).
+
+Outputs:
+
+TL;DR (1–2 sentences)
+
+Bullets: key points
+
+“What this means / what to do” section
+
+Citations: [p. 4], [p. 12–13]
+
+6) API routes
+
+POST /api/upload → returns doc_id, page count, preview.
+
+POST /api/explain → body: { doc_id, readingLevel, mode } → returns explanation with citation anchors.
+
+GET /api/usage → current plan + remaining pages.
+
+POST /api/stripe/create-portal → Stripe customer portal link.
+
+POST /api/stripe/create-checkout → create subscription checkout.
+
+POST /api/stripe/webhook → updates user plan & billing period.
+
+7) Stripe setup (subscription today)
+
+Create Products: DocExplain Standard, DocExplain Pro.
+
+Prices: $9.99 (monthly), $19.99 (monthly).
+
+Checkout session mode: subscription; collect email; set metadata.userId.
+
+Webhook events to listen for:
+
+customer.subscription.created/updated/deleted
+
+checkout.session.completed
+
+invoice.paid / invoice.payment_failed
+
+On webhook: upsert users.billing_plan, period_start, period_end, reset counters when new period starts.
+
+8) Frontend essentials
+
+Uploader with drag & drop (accept PDF/DOCX/TXT).
+
+Explanation panel with:
+
+Reading-level slider (e.g., 5th grade → Pro).
+
+Mode dropdown (General / Healthcare / Legal / School / Business).
+
+“Generate explanation” button; loading states; retry.
+
+Highlights: show key sentences; click → scroll to source text page preview.
+
+Account/Billing: show plan, pages used, Upgrade/Downgrade via Stripe link.
+
+Navbar: Home, Dashboard, Pricing, Account.
+
+9) Replit run/deploy
+
+Combined monorepo or two repls (server & web). Easiest to start as one:
+
+Root package.json scripts:
+
+{
+  "scripts": {
+    "dev:server": "tsx server/index.ts",
+    "dev:web": "vite",
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:web\"",
+    "build:web": "cd web && vite build",
+    "start": "node server/index.js"
+  }
+}
+
+
+In Replit, set Run command to npm run dev for development.
+
+For public URL, proxy /api to server and serve web build (or run separate ports).
+
+10) Security & limits (launch checklist)
+
+File size limit (e.g., 50MB) + type whitelist.
+
+Virus scan (optional for now); reject executables.
+
+Rate limiting (per IP, per user).
+
+Log PII-free metrics only; add a clear privacy note.
+
+Error boundaries on frontend, 5xx alerting on backend.
+
+Graceful fallback when LLM fails (retry with smaller chunk, or ask user to select pages).

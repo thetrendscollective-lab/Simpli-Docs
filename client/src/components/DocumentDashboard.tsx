@@ -12,16 +12,31 @@ import PaymentFlow from "@/components/PaymentFlow";
 interface DocumentDashboardProps {
   documentId: string;
   language: string;
+  sessionId: string;
   onDelete: () => void;
 }
 
-export default function DocumentDashboard({ documentId, language, onDelete }: DocumentDashboardProps) {
+export default function DocumentDashboard({ documentId, language, sessionId, onDelete }: DocumentDashboardProps) {
   const [activeTab, setActiveTab] = useState<"summary" | "glossary" | "original">("summary");
   const { toast } = useToast();
 
   const { data: document, isLoading } = useQuery<Document>({
     queryKey: ["/api/documents", documentId],
     enabled: !!documentId,
+    queryFn: async () => {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        headers: {
+          'x-session-id': sessionId
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    }
   });
 
   const handleDelete = async () => {
@@ -32,6 +47,10 @@ export default function DocumentDashboard({ documentId, language, onDelete }: Do
     try {
       const response = await fetch(`/api/documents/${documentId}`, {
         method: 'DELETE',
+        headers: {
+          'x-session-id': sessionId
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -103,6 +122,7 @@ export default function DocumentDashboard({ documentId, language, onDelete }: Do
         documentId={documentId}
         filename={document.filename}
         pageCount={pageCount}
+        sessionId={sessionId}
         onPaymentSuccess={() => {
           // Reload the document data after successful payment
           window.location.reload();
@@ -156,10 +176,10 @@ export default function DocumentDashboard({ documentId, language, onDelete }: Do
           
           <div className="p-6 tab-content">
             {activeTab === "summary" && (
-              <SummaryTab documentId={documentId} language={language} />
+              <SummaryTab documentId={documentId} language={language} sessionId={sessionId} />
             )}
             {activeTab === "glossary" && (
-              <GlossaryTab documentId={documentId} language={language} />
+              <GlossaryTab documentId={documentId} language={language} sessionId={sessionId} />
             )}
             {activeTab === "original" && (
               <OriginalTextTab document={{
@@ -173,7 +193,7 @@ export default function DocumentDashboard({ documentId, language, onDelete }: Do
 
       {/* Q&A Sidebar */}
       <div className="lg:col-span-1">
-        <QASidebar documentId={documentId} language={language} />
+        <QASidebar documentId={documentId} language={language} sessionId={sessionId} />
       </div>
     </div>
   );
