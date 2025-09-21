@@ -7,6 +7,7 @@ import { type QAInteraction } from "@shared/schema";
 interface QASidebarProps {
   documentId: string;
   language: string;
+  sessionId: string;
 }
 
 
@@ -20,7 +21,7 @@ interface QAResult {
   confidence: number;
 }
 
-export default function QASidebar({ documentId, language }: QASidebarProps) {
+export default function QASidebar({ documentId, language, sessionId }: QASidebarProps) {
   const [question, setQuestion] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -28,14 +29,38 @@ export default function QASidebar({ documentId, language }: QASidebarProps) {
   const { data: qaHistory = [], isLoading } = useQuery<QAInteraction[]>({
     queryKey: ["/api/documents", documentId, "qa"],
     enabled: !!documentId,
+    queryFn: async () => {
+      const response = await fetch(`/api/documents/${documentId}/qa`, {
+        headers: {
+          'x-session-id': sessionId
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    }
   });
 
   const askQuestionMutation = useMutation({
     mutationFn: async (questionText: string) => {
-      const response = await apiRequest("POST", `/api/documents/${documentId}/ask`, {
-        question: questionText,
-        language
+      const response = await fetch(`/api/documents/${documentId}/ask`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-id': sessionId
+        },
+        body: JSON.stringify({ question: questionText, language }),
+        credentials: 'include'
       });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
       return await response.json() as QAResult;
     },
     onSuccess: () => {

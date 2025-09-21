@@ -67,6 +67,7 @@ export default function Home() {
           <DocumentDashboard
             documentId={currentDocumentId}
             language={language}
+            sessionId={sessionId}
             onDelete={handleDeleteDocument}
             data-testid="document-dashboard"
           />

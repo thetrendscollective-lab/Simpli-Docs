@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 interface GlossaryTabProps {
   documentId: string;
   language: string;
+  sessionId: string;
 }
 
 interface GlossaryTerm {
@@ -12,13 +13,24 @@ interface GlossaryTerm {
   pageRefs: number[];
 }
 
-export default function GlossaryTab({ documentId, language }: GlossaryTabProps) {
+export default function GlossaryTab({ documentId, language, sessionId }: GlossaryTabProps) {
   const { data: glossary, isLoading } = useQuery({
     queryKey: ["/api/documents", documentId, "glossary", language],
     queryFn: async () => {
-      const response = await apiRequest("POST", `/api/documents/${documentId}/glossary`, {
-        language
+      const response = await fetch(`/api/documents/${documentId}/glossary`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-id': sessionId
+        },
+        body: JSON.stringify({ language }),
+        credentials: 'include'
       });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
       return await response.json() as GlossaryTerm[];
     },
     enabled: !!documentId,

@@ -7,6 +7,7 @@ import Tooltip from "@/components/Tooltip";
 interface SummaryTabProps {
   documentId: string;
   language: string;
+  sessionId: string;
 }
 
 interface DocumentSummary {
@@ -17,7 +18,7 @@ interface DocumentSummary {
   riskFlags: string[];
 }
 
-export default function SummaryTab({ documentId, language }: SummaryTabProps) {
+export default function SummaryTab({ documentId, language, sessionId }: SummaryTabProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -25,9 +26,20 @@ export default function SummaryTab({ documentId, language }: SummaryTabProps) {
   const { data: summary, isLoading } = useQuery({
     queryKey: ["/api/documents", documentId, "summary", language],
     queryFn: async () => {
-      const response = await apiRequest("POST", `/api/documents/${documentId}/summarize`, {
-        language
+      const response = await fetch(`/api/documents/${documentId}/summarize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-id': sessionId
+        },
+        body: JSON.stringify({ language }),
+        credentials: 'include'
       });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
       return await response.json() as DocumentSummary;
     },
     enabled: !!documentId,

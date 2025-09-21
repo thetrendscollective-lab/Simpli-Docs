@@ -23,10 +23,11 @@ interface PaymentFlowProps {
   documentId: string;
   filename: string;
   pageCount: number;
+  sessionId: string;
   onPaymentSuccess: () => void;
 }
 
-const CheckoutForm = ({ documentId, onPaymentSuccess }: { documentId: string; onPaymentSuccess: () => void }) => {
+const CheckoutForm = ({ documentId, sessionId, onPaymentSuccess }: { documentId: string; sessionId: string; onPaymentSuccess: () => void }) => {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -58,7 +59,13 @@ const CheckoutForm = ({ documentId, onPaymentSuccess }: { documentId: string; on
         });
       } else {
         // Verify payment with server
-        const response = await apiRequest("POST", `/api/documents/${documentId}/verify-payment`);
+        const response = await fetch(`/api/documents/${documentId}/verify-payment`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-id': sessionId
+          }
+        });
         const verificationResult = await response.json();
         
         if (verificationResult.paymentStatus === "paid") {
@@ -75,7 +82,13 @@ const CheckoutForm = ({ documentId, onPaymentSuccess }: { documentId: string; on
           // Retry verification after a short delay
           setTimeout(async () => {
             try {
-              const retryResponse = await apiRequest("POST", `/api/documents/${documentId}/verify-payment`);
+              const retryResponse = await fetch(`/api/documents/${documentId}/verify-payment`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-session-id': sessionId
+                }
+              });
               const retryResult = await retryResponse.json();
               if (retryResult.paymentStatus === "paid") {
                 onPaymentSuccess();
@@ -125,7 +138,7 @@ const CheckoutForm = ({ documentId, onPaymentSuccess }: { documentId: string; on
   );
 };
 
-export default function PaymentFlow({ documentId, filename, pageCount, onPaymentSuccess }: PaymentFlowProps) {
+export default function PaymentFlow({ documentId, filename, pageCount, sessionId, onPaymentSuccess }: PaymentFlowProps) {
   const [clientSecret, setClientSecret] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -152,8 +165,13 @@ export default function PaymentFlow({ documentId, filename, pageCount, onPayment
     // Create PaymentIntent when component loads
     const createPaymentIntent = async () => {
       try {
-        const response = await apiRequest("POST", "/api/create-payment-intent", { 
-          documentId
+        const response = await fetch('/api/create-payment-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-id': sessionId
+          },
+          body: JSON.stringify({ documentId })
         });
         const data = await response.json();
         setClientSecret(data.clientSecret);
@@ -169,7 +187,7 @@ export default function PaymentFlow({ documentId, filename, pageCount, onPayment
     };
 
     createPaymentIntent();
-  }, [documentId, toast]);
+  }, [documentId, sessionId, toast]);
 
   if (isLoading) {
     return (
@@ -270,7 +288,7 @@ export default function PaymentFlow({ documentId, filename, pageCount, onPayment
         </CardHeader>
         <CardContent>
           <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <CheckoutForm documentId={documentId} onPaymentSuccess={onPaymentSuccess} />
+            <CheckoutForm documentId={documentId} sessionId={sessionId} onPaymentSuccess={onPaymentSuccess} />
           </Elements>
         </CardContent>
       </Card>
