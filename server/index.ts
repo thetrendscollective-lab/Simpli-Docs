@@ -41,19 +41,18 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   // tiny test page: shows if supabase works
-  app.get("/test-conn", async (req, res) => {
+  app.get("/test-conn", async (_req, res) => {
+    // IMPORTANT: point to the schema, then table
     const { data, error } = await supabase
-      .from("docexplain.users")
-      .select("id, email, free_pages_remaining")
-      .limit(1);
+      .schema("docexplain")
+      .from("users")
+      .select("*")
+      .limit(5);
 
     if (error) {
-      // send the error so we can see what's wrong
       return res.status(500).json({ message: "Supabase error", details: error.message });
     }
-
-    // if it works but there are no users yet, you'll see []
-    return res.json(data);
+    return res.json(data ?? []);
   });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
