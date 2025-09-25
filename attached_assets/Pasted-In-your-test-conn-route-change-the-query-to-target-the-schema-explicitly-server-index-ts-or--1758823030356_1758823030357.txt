@@ -1,0 +1,74 @@
+In your /test-conn route, change the query to target the schema explicitly:
+
+// server/index.ts (or wherever your /test-conn route lives)
+import { supabase } from "./services/supa";
+
+app.get("/test-conn", async (_req, res) => {
+  // IMPORTANT: point to the schema, then table
+  const { data, error } = await supabase
+    .schema("docexplain")
+    .from("users")
+    .select("*")
+    .limit(5);
+
+  if (error) {
+    return res.status(500).json({ message: "Supabase error", details: error.message });
+  }
+  return res.json(data ?? []);
+});
+
+
+If your code currently has .from("docexplain.users"), replace it with the schema-aware version above.
+
+If you’re on Supabase JS v1
+
+Schema selection wasn’t as ergonomic. You have two good options:
+
+Upgrade to v2 (recommended), or
+
+Run a tiny SQL RPC or use the REST endpoint with the Accept-Profile: docexplain header. (v2 upgrade is simpler.)
+
+B) Make sure the table actually exists (one-time check)
+
+Open Supabase → SQL Editor and run:
+
+-- create the schema if it doesn't exist
+create schema if not exists docexplain;
+
+-- create a simple users table if you haven't yet
+create table if not exists docexplain.users (
+  id uuid primary key default gen_random_uuid(),
+  email text,
+  created_at timestamptz default now()
+);
+
+
+If it already exists, this won’t hurt anything.
+
+C) (Optional, but recommended) Use the service role key on the server
+
+Since this is a server-side Replit app, set your Supabase client with the SERVICE_ROLE key so your health check isn’t blocked by RLS policies:
+
+// server/services/supa.ts
+import { createClient } from "@supabase/supabase-js";
+
+export const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  // use the service role key on the server
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+
+(Keep using the anon key on the frontend only.)
+
+D) Retest
+
+Re-deploy / restart your Replit server.
+
+Visit: https://<your-app>.replit.app/test-conn
+
+[] → connection works (no rows yet)
+
+JSON rows → works and you have data
+
+“Supabase error” → copy the message to me and I’ll zero in.
