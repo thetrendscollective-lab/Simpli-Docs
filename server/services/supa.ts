@@ -8,7 +8,7 @@ export const supabase = createClient(
 // Add a new user
 export async function addUser(email: string) {
   const { data, error } = await supabase
-    .from("docexplain.users") // <-- schema-qualified
+    .from("simplydocs.users") // <-- schema-qualified
     .insert([{ email }]);
 
   if (error) {
@@ -21,7 +21,7 @@ export async function addUser(email: string) {
 // Deduct free trial pages
 export async function usePages(userId: string, pages: number) {
   const { data: user } = await supabase
-    .from("docexplain.users")
+    .from("simplydocs.users")
     .select("free_pages_remaining")
     .eq("id", userId)
     .single();
@@ -33,7 +33,7 @@ export async function usePages(userId: string, pages: number) {
   }
 
   await supabase
-    .from("docexplain.users")
+    .from("simplydocs.users")
     .update({
       free_pages_remaining: user.free_pages_remaining - pages,
     })
