@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import OpenAI from "openai";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase } from "./services/supa";
@@ -65,6 +66,7 @@ app.use((req, res, next) => {
       storageBucket: process.env.STORAGE_BUCKET || "not set",
     });
   });
+
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
