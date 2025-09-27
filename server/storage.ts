@@ -26,6 +26,9 @@ export interface IStorage {
   
   // Session cleanup
   cleanupSession(sessionId: string): Promise<void>;
+  
+  // Get latest document
+  getLatestDocument(): Promise<Document | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -144,6 +147,16 @@ export class MemStorage implements IStorage {
         this.qaInteractions.delete(qa.id);
       }
     }
+  }
+
+  async getLatestDocument(): Promise<Document | undefined> {
+    const allDocs = Array.from(this.documents.values());
+    if (allDocs.length === 0) return undefined;
+    
+    // Sort by creation time (most recent first)
+    return allDocs.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )[0];
   }
 }
 
