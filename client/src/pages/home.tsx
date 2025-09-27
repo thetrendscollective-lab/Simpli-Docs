@@ -20,8 +20,10 @@ export default function Home() {
   }, []);
 
   const handleFileUploaded = (documentId: string) => {
-    setCurrentDocumentId(documentId);
-    setProcessingState("complete");
+    // Store session ID for results page
+    localStorage.setItem('sessionId', sessionId);
+    // Redirect to results page instead of showing dashboard
+    window.location.href = `/doc/${documentId}`;
   };
 
   const handleDeleteDocument = () => {

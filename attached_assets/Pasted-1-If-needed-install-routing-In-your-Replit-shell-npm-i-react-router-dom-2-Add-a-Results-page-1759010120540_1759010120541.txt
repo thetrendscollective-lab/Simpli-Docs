@@ -1,0 +1,143 @@
+1) (If needed) install routing
+
+In your Replit shell:
+
+npm i react-router-dom
+
+2) Add a Results page
+
+Create: src/pages/DocResult.tsx
+
+import React, { useEffect, useState } from "react";
+
+type Gloss = { term: string; meaning: string };
+type Explanation = {
+  id: string;
+  summary: string;
+  bullet_points: string[];
+  glossary: Gloss[];
+  action_items: string[];
+  confidence: number;
+  created_at: string;
+};
+
+async function fetchExplanation(documentId: string): Promise<Explanation | null> {
+  const r = await fetch(`/api/explanations/${documentId}`);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error((await r.json()).error || "Failed to fetch explanation");
+  return r.json();
+}
+
+async function createExplanation(documentId: string, domain = "general"): Promise<void> {
+  const r = await fetch(`/api/explain`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ document_id: documentId, domain })
+  });
+  if (!r.ok) throw new Error((await r.json()).error || "Explain failed");
+}
+
+export default function DocResult({ documentId }: { documentId: string }) {
+  const [loading, setLoading] = useState(true);
+  const [exp, setExp] = useState<Explanation | null>(null);
+  const [error, setError] = useState<string>("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        setError("");
+        // 1) try to fetch
+        let e = await fetchExplanation(documentId);
+        // 2) if none, create once then fetch again
+        if (!e) {
+          await createExplanation(documentId, "general");
+          e = await fetchExplanation(documentId);
+        }
+        setExp(e);
+      } catch (err: any) {
+        setError(err.message || "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [documentId]);
+
+  if (loading) return <div className="p-6">Analyzing your document…</div>;
+  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (!exp) return <div className="p-6">No explanation yet.</div>;
+
+  return (
+    <div className="max-w-3xl mx-auto p-6 space-y-6">
+      <h1 className="text-2xl font-bold">Your Plain-Language Explanation</h1>
+
+      <section className="border rounded-xl p-4">
+        <h2 className="text-xl font-semibold">Summary</h2>
+        <p className="mt-2 leading-relaxed">{exp.summary}</p>
+      </section>
+
+      <section className="border rounded-xl p-4">
+        <h3 className="font-semibold">Key Points</h3>
+        <ul className="list-disc pl-6 mt-2 space-y-1">
+          {(exp.bullet_points || []).map((b, i) => <li key={i}>{b}</li>)}
+        </ul>
+      </section>
+
+      <section className="border rounded-xl p-4">
+        <h3 className="font-semibold">Glossary</h3>
+        <ul className="list-disc pl-6 mt-2 space-y-1">
+          {(exp.glossary || []).map((g, i) => (
+            <li key={i}><strong>{g.term}:</strong> {g.meaning}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="border rounded-xl p-4">
+        <h3 className="font-semibold">Action Items</h3>
+        <ul className="list-disc pl-6 mt-2 space-y-1">
+          {(exp.action_items || []).map((a, i) => <li key={i}>{a}</li>)}
+        </ul>
+        <p className="text-xs text-gray-500 mt-3">
+          Simplidocs provides plain-language explanations and is not legal, medical, or financial advice.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+3) Add a route to render it
+If you already use React Router:
+
+Open src/main.tsx (or wherever your router lives) and add a /doc/:id route.
+
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import DocResult from "./pages/DocResult";
+import React from "react";
+import App from "./App"; // your home/upload page
+
+function DocResultRoute() {
+  const id = window.location.pathname.split("/").pop() || "";
+  return <DocResult documentId={id} />;
+}
+
+const router = createBrowserRouter([
+  { path: "/", element: <App /> },
+  { path: "/doc/:id", element: <DocResultRoute /> },
+]);
+
+export default function Root() {
+  return <RouterProvider router={router} />;
+}
+
+
+If you don’t have a router yet, wrap your app with the Router provider as above (and ensure Root is mounted in main.tsx).
+
+4) Redirect to Results after upload
+
+Find where your upload finishes (after /api/upload/complete returns ok). Add:
+
+// after finalize succeeds (you should have document_id from /api/upload/init)
+window.location.href = `/doc/${initJson.document_id}`;
+
+
+If you don’t still have initJson in scope, store its document_id in state or localStorage and use it after finalize.

@@ -554,6 +554,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New API endpoints for the DocResult component
+  app.get("/api/explanations/:id", async (req, res) => {
+    try {
+      const { id: documentId } = req.params;
+      const sessionId = req.headers['x-session-id'] as string;
+
+      if (!sessionId) {
+        return res.status(401).json({ error: "Session ID required" });
+      }
+
+      const document = await storage.getDocument(documentId);
+      if (!document || document.sessionId !== sessionId) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Return explanation in the expected format
+      const glossaryData = document.glossary ? (typeof document.glossary === 'string' ? JSON.parse(document.glossary) : document.glossary) : [];
+      const explanation = {
+        id: documentId,
+        summary: document.summary || "",
+        bullet_points: [], // Extract from processedSections if needed
+        glossary: Array.isArray(glossaryData) ? glossaryData.map((term: any) => ({
+          term: term.term,
+          meaning: term.definition
+        })) : [],
+        action_items: [], // Could be extracted from summary if needed
+        confidence: 0.9, // Static confidence for now
+        created_at: new Date().toISOString()
+      };
+
+      res.json(explanation);
+    } catch (error) {
+      console.error("Error fetching explanation:", error);
+      res.status(500).json({ error: "Failed to fetch explanation" });
+    }
+  });
+
+  app.post("/api/explain", async (req, res) => {
+    try {
+      const { document_id, domain = "general" } = req.body;
+      const sessionId = req.headers['x-session-id'] as string;
+
+      if (!sessionId) {
+        return res.status(401).json({ error: "Session ID required" });
+      }
+
+      const document = await storage.getDocument(document_id);
+      if (!document || document.sessionId !== sessionId) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // If document doesn't have summary/glossary yet, generate them
+      if (!document.summary) {
+        // Generate summary using existing endpoint pattern
+        const summaryResponse = await fetch(`http://localhost:5000/api/documents/${document_id}/summarize`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-id': sessionId
+          }
+        });
+        
+        if (!summaryResponse.ok) {
+          throw new Error("Failed to generate summary");
+        }
+      }
+
+      const glossaryData = document.glossary ? (typeof document.glossary === 'string' ? JSON.parse(document.glossary) : document.glossary) : [];
+      if (!glossaryData || !Array.isArray(glossaryData) || glossaryData.length === 0) {
+        // Generate glossary using existing endpoint pattern
+        const glossaryResponse = await fetch(`http://localhost:5000/api/documents/${document_id}/glossary`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-id': sessionId
+          }
+        });
+        
+        if (!glossaryResponse.ok) {
+          throw new Error("Failed to generate glossary");
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error creating explanation:", error);
+      res.status(500).json({ error: "Failed to create explanation" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
