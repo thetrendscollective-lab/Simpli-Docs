@@ -42,7 +42,10 @@ app.use((req, res, next) => {
 
   // tiny test page: shows if supabase works
   app.get("/test-conn", async (_req, res) => {
-    // IMPORTANT: point to the schema, then table
+    if (!supabase) {
+      return res.status(500).json({ message: "Supabase not configured", details: "Environment variables missing" });
+    }
+    
     const { data, error } = await supabase
       .from("simplydocs_users")
       .select("*")
