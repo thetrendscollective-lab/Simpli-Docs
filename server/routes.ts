@@ -644,6 +644,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick test endpoint to get latest document ID  
+  app.get("/api/docs/latest-id", async (_req, res) => {
+    try {
+      const latestDoc = await storage.getLatestDocument();
+      
+      if (!latestDoc) {
+        return res.status(404).json({ error: "no docs yet" });
+      }
+      
+      res.json({ id: latestDoc.id });
+    } catch (error) {
+      console.error("Error fetching latest doc ID:", error);
+      res.status(500).json({ error: "Failed to fetch latest document ID" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
