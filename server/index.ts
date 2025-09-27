@@ -54,6 +54,15 @@ app.use((req, res, next) => {
     return res.json(data ?? []);
   });
 
+  app.get("/api/debug/env", (_req, res) => {
+    res.json({
+      supabaseUrl: process.env.SUPABASE_URL ? "set ✅" : "missing ❌",
+      serviceRole: process.env.SUPABASE_SERVICE_ROLE ? "set ✅" : "missing ❌",
+      dbUrl: process.env.DATABASE_URL ? "set ✅" : "missing ❌",
+      storageBucket: process.env.STORAGE_BUCKET || "not set",
+    });
+  });
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
