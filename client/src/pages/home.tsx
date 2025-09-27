@@ -89,7 +89,7 @@ export default function Home() {
             </p>
           </div>
           <p className="text-sm text-muted-foreground">
-            Plain-Language Doc Explainer © 2024 - Made for understanding complex documents - A Trends Collective Company
+            Simpli-Docs © 2024 - Made for understanding complex documents - A Trends Collective Company
           </p>
         </div>
       </footer>
