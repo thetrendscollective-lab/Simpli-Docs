@@ -33,7 +33,7 @@ export default function Header({ language, onLanguageChange }: HeaderProps) {
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Plain-Language Doc Explainer</h1>
+            <h1 className="text-2xl font-bold text-foreground">Simpli-Docs</h1>
             <p className="text-muted-foreground mt-1">Transform complex legal and medical documents into clear, understandable language</p>
           </div>
           <div className="flex items-center space-x-4">
