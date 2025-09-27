@@ -1,12 +1,25 @@
 import { createClient } from "@supabase/supabase-js";
 
-export const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Make Supabase optional if environment variables are missing
+let supabase: any = null;
+
+if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE) {
+  supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE
+  );
+} else {
+  console.warn("Supabase environment variables not found. Free trial feature will be disabled.");
+}
+
+export { supabase };
 
 // Add a new user
 export async function addUser(email: string) {
+  if (!supabase) {
+    throw new Error("Supabase not configured");
+  }
+  
   const { data, error } = await supabase
     .from("simplydocs_users")
     .insert([{ email }]);
@@ -20,6 +33,10 @@ export async function addUser(email: string) {
 
 // Deduct free trial pages
 export async function usePages(userId: string, pages: number) {
+  if (!supabase) {
+    throw new Error("Supabase not configured");
+  }
+
   const { data: user } = await supabase
     .from("simplydocs_users")
     .select("free_pages_remaining")
