@@ -44,8 +44,7 @@ app.use((req, res, next) => {
   app.get("/test-conn", async (_req, res) => {
     // IMPORTANT: point to the schema, then table
     const { data, error } = await supabase
-      .schema("simplydocs")
-      .from("users")
+      .from("simplydocs_users")
       .select("*")
       .limit(5);
 
