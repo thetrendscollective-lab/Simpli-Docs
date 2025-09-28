@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import LandingPage from "./pages/LandingPage";
 import Home from "./pages/home";
 import DocResultPage from "./pages/DocResult";
 import { queryClient } from "./lib/queryClient";
@@ -9,7 +10,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import "./index.css";
 
 const router = createBrowserRouter([
-  { path: "/", element: <Home /> },
+  { path: "/", element: <LandingPage /> },
+  { path: "/upload", element: <Home /> },
   { path: "/doc/:id", element: <DocResultPage /> },
 ]);
 

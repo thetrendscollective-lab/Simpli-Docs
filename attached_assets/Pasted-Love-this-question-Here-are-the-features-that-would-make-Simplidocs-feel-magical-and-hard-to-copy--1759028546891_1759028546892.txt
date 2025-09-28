@@ -1,0 +1,69 @@
+Love this question. Here are the features that would make Simplidocs feel magical (and hard to copy), grouped by value + how quickly you can ship them with your current stack.
+
+1) Understand-at-a-glance (UX “wow”)
+
+Side-by-side “Original ↔ Plain English” with a toggle.
+
+Highlight-to-Explain: select any sentence/term → instant plain-language popover (grounded to that exact spot).
+
+Reading level slider: Simple / Standard / Detailed (just pass a level param to /api/explain).
+
+Confidence & Source chips: show short quotes from the document under each bullet so users see where it came from.
+
+2) Actionable guidance (not advice)
+
+Deadline detector → checklist: auto-pull dates/“within X days” phrases; show a countdown and “Add to Calendar (.ics)” button.
+
+Smart Q&A (grounded): ask follow-ups that cite the matching lines/section.
+
+One-click templates: generate drafts like insurance appeal, clarification email to clinic, request for records (user edits before sending).
+
+3) Medical & insurance superpowers
+
+EOB explainer: “What was billed → Allowed → Insurance paid → You owe” with a tiny bar chart.
+
+ICD/CPT plain-language definitions inline; flag likely duplicates or denials; call out appeal window if present.
+
+Visit prep card: “Questions to ask your doctor next” generated from the findings.
+
+4) Legal document clarity
+
+Parties, jurisdiction, and deadlines panel with a response clock.
+
+Clause snapshots: compress each key clause into one line; expand for details.
+
+Form finder (non-advisory): suggest official form names/links that match the doc’s topic (e.g., “proof of service,” “answer form”).
+
+5) Trust & privacy (big differentiator)
+
+Ephemeral Mode: auto-delete files and text after 24h (toggle at upload).
+
+Share-safe links: time-limited, revocable links to the summary only (watermarked with viewer email/time).
+
+PII-gentle previews: blur names/IDs in the preview while keeping originals secure in Storage.
+
+6) Accessibility & language
+
+Read-aloud for summaries (Web Speech API in browser).
+
+Dyslexia-friendly mode (font/spacing toggle).
+
+Translate + explain (English ↔ Spanish at minimum) with the same structure (summary, bullets, glossary, actions).
+
+7) Workflow & export
+
+Case Binder: group multiple docs into a timeline (e.g., hospital stay → bills → appeals).
+
+One-click Export: branded PDF of the explanation + glossary; optional CSV of action items.
+
+Notes & bookmarks: let users pin lines from the original and attach their own notes.
+
+8) Monetization that feels fair
+
+Free: 2 docs/month, basic explanation.
+
+Standard: unlimited explanations, deadlines → calendar, read-aloud, translations.
+
+Pro: EOB analyzer, legal deadlines clock, case binder, share-safe links, exports.
+
+Family/Caregiver plan: 3–5 seats with a shared binder.
