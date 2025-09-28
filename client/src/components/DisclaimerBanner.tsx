@@ -23,8 +23,10 @@ export default function DisclaimerBanner() {
               <p className="text-sm leading-relaxed font-medium">
                 <strong>This tool provides plain-language explanations for informational purposes only and is NOT legal or medical advice.</strong>
                 <br />
+                <strong>AI may make mistakes or misinterpret complex information.</strong>
+                <br />
                 <span className="text-red-100">
-                  Always consult with a licensed attorney, doctor, or other qualified professional for guidance specific to your situation.
+                  Always verify AI-generated explanations and consult with a licensed attorney, doctor, or other qualified professional for guidance specific to your situation.
                 </span>
               </p>
             </div>
@@ -42,10 +44,11 @@ export default function DisclaimerBanner() {
         {/* Additional emphasis */}
         <div className="mt-4 pt-3 border-t border-red-400/30">
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-red-100">
+            <span>🤖 AI may make errors</span>
             <span>📋 Not professional advice</span>
             <span>⚖️ Not a substitute for legal counsel</span> 
             <span>🩺 Not a replacement for medical consultation</span>
-            <span>💼 For educational purposes only</span>
+            <span>✅ Always verify information</span>
           </div>
         </div>
       </div>
