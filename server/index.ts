@@ -1,8 +1,25 @@
 import express, { type Request, Response, NextFunction } from "express";
 import OpenAI from "openai";
-import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { supabase } from "./services/supa";
+import { uploadInit, uploadComplete } from "./routes/upload";
+import { getDoc, getDocText, getLatestDocId } from "./routes/read";
+import { postExplain, getExplanation } from "./routes/explain";
+import Stripe from "stripe";
+import { storage } from "./storage";
+import { OpenAIService } from "./services/openai";
+import { DocumentProcessor } from "./services/documentProcessor";
+import { insertQASchema } from "@shared/schema";
+import { randomUUID } from "crypto";
+import { getErrorMessage } from "./utils";
+
+// Initialize Stripe
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const openaiService = new OpenAIService();
+const documentProcessor = new DocumentProcessor();
 
 const app = express();
 app.use(express.json());
@@ -39,7 +56,371 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  // Mount the route handlers as specified
+  app.post("/api/upload/init", uploadInit);
+  app.post("/api/upload/complete", uploadComplete);
+  app.get("/api/docs/:id", getDoc);
+  app.get("/api/docs/:id/text", getDocText);
+  app.post("/api/explain", postExplain);
+  app.get("/api/explanations/:document_id", getExplanation);
+  app.get("/api/docs/latest-id", getLatestDocId);
+
+  // Compatibility route for frontend - maps old endpoint to new handler
+  app.post("/api/documents/upload", uploadComplete);
+
+  // Session management
+  app.post("/api/session", async (req, res) => {
+    try {
+      const sessionId = randomUUID();
+      res.json({ sessionId });
+    } catch (error) {
+      console.error("Error creating session:", error);
+      res.status(500).json({ error: "Failed to create session" });
+    }
+  });
+
+  // Document processing routes
+  app.post("/api/documents/:id/summarize", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { language = 'en' } = req.body;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
+      }
+
+      if (document.paymentStatus !== "paid") {
+        return res.status(402).json({ 
+          error: "Payment required", 
+          message: "Please complete payment to access document processing features",
+          paymentStatus: document.paymentStatus 
+        });
+      }
+
+      if (!document.originalText) {
+        return res.status(400).json({ error: "No text available for summarization" });
+      }
+
+      const documentType = documentProcessor.detectDocumentType(document.originalText);
+      const summary = await openaiService.summarizeDocument(
+        document.originalText,
+        documentType,
+        language
+      );
+
+      await storage.updateDocument(id, { summary: JSON.stringify(summary) });
+      res.json(summary);
+
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      res.status(500).json({ 
+        error: getErrorMessage(error) || "Failed to generate summary" 
+      });
+    }
+  });
+
+  app.post("/api/documents/:id/glossary", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { language = 'en' } = req.body;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
+      }
+
+      if (document.paymentStatus !== "paid") {
+        return res.status(402).json({ 
+          error: "Payment required", 
+          message: "Please complete payment to access document processing features",
+          paymentStatus: document.paymentStatus 
+        });
+      }
+
+      if (!document.originalText) {
+        return res.status(400).json({ error: "No text available for glossary extraction" });
+      }
+
+      const glossaryResult = await openaiService.extractGlossary(
+        document.originalText,
+        language
+      );
+
+      await storage.updateDocument(id, { glossary: glossaryResult.terms });
+      res.json(glossaryResult.terms);
+
+    } catch (error) {
+      console.error("Error generating glossary:", error);
+      res.status(500).json({ 
+        error: getErrorMessage(error) || "Failed to generate glossary" 
+      });
+    }
+  });
+
+  app.post("/api/documents/:id/ask", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { question, language = 'en' } = req.body;
+      const sessionId = req.headers['x-session-id'] as string;
+
+      if (!question?.trim()) {
+        return res.status(400).json({ error: "Question is required" });
+      }
+
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
+      }
+
+      if (document.paymentStatus !== "paid") {
+        return res.status(402).json({ 
+          error: "Payment required", 
+          message: "Please complete payment to access document processing features",
+          paymentStatus: document.paymentStatus 
+        });
+      }
+
+      if (!document.processedSections) {
+        return res.status(400).json({ error: "Document sections not available" });
+      }
+
+      const chunks = documentProcessor.createDocumentChunks(
+        document.processedSections as any[]
+      );
+
+      const result = await openaiService.answerQuestion(question, chunks, language);
+
+      const qaData = insertQASchema.parse({
+        documentId: id,
+        question,
+        answer: result.answer,
+        citations: result.citations
+      });
+
+      await storage.createQA(qaData);
+      res.json(result);
+
+    } catch (error) {
+      console.error("Error answering question:", error);
+      res.status(500).json({ 
+        error: getErrorMessage(error) || "Failed to answer question" 
+      });
+    }
+  });
+
+  app.get("/api/documents/:id/qa", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
+      }
+
+      const qaHistory = await storage.getQAByDocument(id);
+      res.json(qaHistory);
+    } catch (error) {
+      console.error("Error fetching Q&A history:", error);
+      res.status(500).json({ error: "Failed to fetch Q&A history" });
+    }
+  });
+
+  app.delete("/api/documents/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      const document = await storage.getDocument(id);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
+      }
+
+      const success = await storage.deleteDocument(id);
+      if (!success) {
+        return res.status(500).json({ error: "Failed to delete document" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      res.status(500).json({ error: "Failed to delete document" });
+    }
+  });
+
+  app.delete("/api/sessions/:sessionId", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      await storage.cleanupSession(sessionId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error cleaning up session:", error);
+      res.status(500).json({ error: "Failed to cleanup session" });
+    }
+  });
+
+  // Payment routes
+  app.post("/api/create-payment-intent", async (req, res) => {
+    try {
+      const { documentId } = req.body;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!documentId) {
+        return res.status(400).json({ error: "Document ID is required" });
+      }
+
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      const document = await storage.getDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
+      }
+
+      if (!document.paymentAmount) {
+        return res.status(400).json({ error: "Payment amount not calculated for document" });
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: document.paymentAmount,
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          documentId: documentId,
+          sessionId: sessionId
+        }
+      });
+
+      await storage.updateDocumentPayment(documentId, {
+        stripePaymentIntentId: paymentIntent.id,
+        paymentStatus: "pending"
+      });
+
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ 
+        error: "Error creating payment intent: " + getErrorMessage(error) 
+      });
+    }
+  });
+
+  app.post("/api/documents/:documentId/verify-payment", async (req, res) => {
+    try {
+      const { documentId } = req.params;
+      const sessionId = req.headers['x-session-id'] as string;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+      }
+
+      const document = await storage.getDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (document.sessionId !== sessionId) {
+        return res.status(403).json({ error: "Unauthorized access to document" });
+      }
+
+      if (!document.stripePaymentIntentId) {
+        return res.status(400).json({ error: "No payment intent found for document" });
+      }
+
+      const paymentIntent = await stripe.paymentIntents.retrieve(document.stripePaymentIntentId);
+      
+      if (paymentIntent.metadata.documentId !== documentId) {
+        return res.status(400).json({ error: "Payment intent does not match document" });
+      }
+
+      if (paymentIntent.metadata.sessionId !== sessionId) {
+        return res.status(400).json({ error: "Payment intent session mismatch" });
+      }
+
+      if (paymentIntent.amount !== document.paymentAmount) {
+        return res.status(400).json({ error: "Payment amount mismatch" });
+      }
+
+      if (paymentIntent.currency !== "usd") {
+        return res.status(400).json({ error: "Payment currency mismatch" });
+      }
+
+      if (paymentIntent.status === "succeeded") {
+        await storage.updateDocumentPayment(documentId, {
+          paymentStatus: "paid"
+        });
+        
+        res.json({ 
+          paymentStatus: "paid",
+          message: "Payment verified successfully" 
+        });
+      } else {
+        res.json({ 
+          paymentStatus: paymentIntent.status,
+          message: "Payment not yet completed" 
+        });
+      }
+    } catch (error: any) {
+      console.error("Error verifying payment:", error);
+      res.status(500).json({ 
+        error: "Error verifying payment: " + getErrorMessage(error) 
+      });
+    }
+  });
+
+  // Create HTTP server
+  const { createServer } = await import("http");
+  const server = createServer(app);
 
   // tiny test page: shows if supabase works
   app.get("/test-conn", async (_req, res) => {
