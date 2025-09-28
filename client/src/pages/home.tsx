@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import FileUpload from "@/components/FileUpload";
 import ProcessingState from "@/components/ProcessingState";
 import DocumentDashboard from "@/components/DocumentDashboard";
+import { Shield, Lock, Globe } from "lucide-react";
 
 export default function Home() {
   const [sessionId, setSessionId] = useState<string>("");
@@ -47,6 +48,38 @@ export default function Home() {
       <Header language={language} onLanguageChange={setLanguage} />
       
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Privacy & Security Banner - More Prominent */}
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-700 rounded-xl p-6 mb-8 shadow-sm">
+          <div className="flex items-center justify-center space-x-3 mb-3">
+            <div className="bg-green-100 dark:bg-green-800 p-2 rounded-full">
+              <Shield className="h-6 w-6 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">🔒 Your Privacy is Protected</h3>
+          </div>
+          <div className="text-center max-w-2xl mx-auto">
+            <p className="text-sm text-muted-foreground mb-2">
+              <strong>Auto-Delete:</strong> Your documents are processed securely and automatically deleted after your session ends.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <strong>Zero Storage:</strong> We do not store your files, personal information, or document content. Everything is processed in real-time and discarded.
+            </p>
+          </div>
+          <div className="flex justify-center space-x-6 mt-4 text-xs text-muted-foreground">
+            <div className="flex items-center space-x-1">
+              <Lock className="h-3 w-3" />
+              <span>SOC 2 Compliant</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Shield className="h-3 w-3" />
+              <span>HIPAA Secure</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Globe className="h-3 w-3" />
+              <span>GDPR Compliant</span>
+            </div>
+          </div>
+        </div>
+
         {processingState === "idle" && (
           <FileUpload
             sessionId={sessionId}
@@ -78,16 +111,6 @@ export default function Home() {
 
       <footer className="bg-card border-t border-border mt-16 py-8">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-center space-x-2 mb-2">
-              <i className="fas fa-shield-alt text-warning"></i>
-              <span className="font-semibold text-foreground">Privacy & Security</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Your documents are processed securely and deleted automatically after your session ends. 
-              We do not store your files or personal information.
-            </p>
-          </div>
           <p className="text-sm text-muted-foreground">
             Simpli-Docs © 2024 - Made for understanding complex documents - A Trends Collective Company
           </p>
