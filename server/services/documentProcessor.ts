@@ -6,7 +6,9 @@ import { getErrorMessage } from "../utils";
 export class DocumentProcessor {
   async extractTextFromPDF(buffer: Buffer): Promise<{ text: string; pageCount: number }> {
     try {
-      const pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+      // Convert Buffer to Uint8Array as required by pdf.js
+      const uint8Array = new Uint8Array(buffer);
+      const pdfDoc = await pdfjsLib.getDocument({ data: uint8Array }).promise;
       const pageCount = pdfDoc.numPages;
       let text = '';
 

@@ -23,15 +23,32 @@ export class OCRService {
   }
 
   async extractTextFromScannedPDF(buffer: Buffer): Promise<string> {
-    // For PDFs that might be scanned images, we would need to convert
-    // PDF pages to images first, then OCR each page
-    // This is a placeholder implementation for now
     try {
-      // TODO: Implement PDF to image conversion using pdf2pic or similar
-      // For now, return a message indicating OCR is not available for PDFs
-      throw new Error('OCR for scanned PDFs requires additional setup. Please ensure the PDF contains extractable text or try uploading as an image (PNG/JPG).');
+      // For scanned PDFs, try to extract as much text as possible
+      // If this fails, suggest user to upload as image instead
+      
+      // Convert buffer to base64 and try OCR on the PDF data
+      // This is a simplified approach - ideally we'd convert PDF pages to images first
+      const base64 = buffer.toString('base64');
+      const dataURL = `data:application/pdf;base64,${base64}`;
+      
+      // Attempt basic OCR recognition
+      const { data: { text } } = await Tesseract.recognize(
+        dataURL,
+        'eng',
+        {
+          logger: () => {} // Silent logging for PDF attempts
+        }
+      );
+      
+      if (!text || text.trim().length < 10) {
+        throw new Error('PDF appears to be scanned but contains minimal extractable text. Please try uploading as PNG or JPG for better OCR results.');
+      }
+      
+      return text;
     } catch (error) {
-      throw new Error(`Failed to extract text from scanned PDF: ${getErrorMessage(error)}`);
+      // Provide helpful error message for users
+      throw new Error(`This PDF appears to be scanned and cannot be processed automatically. Please try: 1) Converting the PDF to PNG/JPG images, or 2) Using a PDF with selectable text. Error: ${getErrorMessage(error)}`);
     }
   }
 
