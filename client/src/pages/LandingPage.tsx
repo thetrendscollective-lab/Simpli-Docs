@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState } from "react";
 import { 
   FileText, 
   Zap, 
@@ -22,10 +24,14 @@ import {
   ArrowRight,
   Sparkles,
   Target,
-  BookOpen
+  BookOpen,
+  Play,
+  X
 } from "lucide-react";
 
 export default function LandingPage() {
+  const [isDemoOpen, setIsDemoOpen] = useState(false);
+
   const features = [
     {
       category: "Understand at a Glance",
@@ -226,10 +232,125 @@ export default function LandingPage() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Button variant="outline" size="lg" className="text-lg px-8 py-6" data-testid="button-watch-demo">
-              <Users className="mr-2 h-5 w-5" />
-              Watch Demo
-            </Button>
+            <Dialog open={isDemoOpen} onOpenChange={setIsDemoOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="lg" className="text-lg px-8 py-6" data-testid="button-watch-demo">
+                  <Play className="mr-2 h-5 w-5" />
+                  Watch Demo
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-2xl">
+                    <Play className="h-6 w-6 text-primary" />
+                    Simpli-Docs Demo
+                  </DialogTitle>
+                  <DialogDescription className="text-base">
+                    See how Simpli-Docs transforms complex documents into clear, understandable language
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-6 mt-6">
+                  {/* Demo Video Placeholder */}
+                  <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-8 border-2 border-dashed border-primary/30">
+                    <div className="text-center">
+                      <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-4">
+                        <Play className="h-10 w-10 text-primary" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2">Interactive Demo Coming Soon!</h3>
+                      <p className="text-muted-foreground mb-4">
+                        We're preparing an interactive demo to show you exactly how Simpli-Docs works.
+                        For now, try uploading a document to see the magic happen!
+                      </p>
+                      <Link to="/upload">
+                        <Button size="lg" className="text-lg px-6" onClick={() => setIsDemoOpen(false)}>
+                          Try It Now - Upload Your Document
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  
+                  {/* Key Features Preview */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="border-2 border-green-200 bg-green-50/50 dark:bg-green-900/10 dark:border-green-800">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Eye className="h-5 w-5 text-green-600" />
+                          Instant Understanding
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                          Upload any legal or medical document and get a plain-language summary in seconds.
+                        </p>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="border-2 border-blue-200 bg-blue-50/50 dark:bg-blue-900/10 dark:border-blue-800">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <MessageCircle className="h-5 w-5 text-blue-600" />
+                          Smart Q&A
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                          Ask questions about your document and get accurate answers with citations.
+                        </p>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="border-2 border-purple-200 bg-purple-50/50 dark:bg-purple-900/10 dark:border-purple-800">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <BookOpen className="h-5 w-5 text-purple-600" />
+                          Key Terms Glossary
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                          Complex jargon automatically explained in simple terms you can understand.
+                        </p>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="border-2 border-orange-200 bg-orange-50/50 dark:bg-orange-900/10 dark:border-orange-800">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Globe className="h-5 w-5 text-orange-600" />
+                          21 Languages
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                          Get explanations in your preferred language for maximum understanding.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  {/* Call to Action */}
+                  <div className="text-center p-6 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                    <h4 className="text-lg font-semibold mb-2">Ready to Try It Yourself?</h4>
+                    <p className="text-muted-foreground mb-4">
+                      Upload your document and experience the power of AI-driven document understanding
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Link to="/upload">
+                        <Button size="lg" className="w-full sm:w-auto" onClick={() => setIsDemoOpen(false)}>
+                          Start Free Trial
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={() => setIsDemoOpen(false)}>
+                        Close Demo
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Trust Indicators */}
