@@ -5,6 +5,7 @@ import { supabase } from "./services/supa";
 import { uploadInit, uploadComplete } from "./routes/upload";
 import { getDoc, getDocText, getLatestDocId } from "./routes/read";
 import { postExplain, getExplanation } from "./routes/explain";
+import docsRouter from "./routes/docs";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { OpenAIService } from "./services/openai";
@@ -67,6 +68,9 @@ app.use((req, res, next) => {
 
   // Compatibility route for frontend - maps old endpoint to new handler
   app.post("/api/documents/upload", uploadComplete);
+
+  // Simplified docs upload route
+  app.use("/api/docs", docsRouter);
 
   // Session management
   app.post("/api/session", async (req, res) => {
