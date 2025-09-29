@@ -8,6 +8,7 @@ interface FileUploadProps {
   onUploadStart: () => void;
   onProcessingStart: () => void;
   onUploadComplete: (documentId: string) => void;
+  onError?: () => void;
 }
 
 export default function FileUpload({ 
@@ -15,7 +16,8 @@ export default function FileUpload({
   language, 
   onUploadStart, 
   onProcessingStart, 
-  onUploadComplete 
+  onUploadComplete,
+  onError 
 }: FileUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -96,7 +98,10 @@ export default function FileUpload({
         description: getErrorMessage(error) || "Failed to upload document. Please try again.",
         variant: "destructive"
       });
-      onUploadComplete(""); // Reset to idle state
+      // Don't navigate anywhere on error - just reset to idle state
+      if (onError) {
+        onError();
+      }
     }
   };
 

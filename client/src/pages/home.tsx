@@ -21,9 +21,16 @@ export default function Home() {
   }, []);
 
   const handleFileUploaded = (documentId: string) => {
+    // Only navigate if we have a valid document ID
+    if (!documentId || documentId.trim() === "") {
+      // No document ID means upload failed - reset to idle state
+      setProcessingState("idle");
+      return;
+    }
+    
     // Store session ID for results page
     localStorage.setItem('sessionId', sessionId);
-    // Redirect to results page instead of showing dashboard
+    // Redirect to results page with valid document ID
     window.location.href = `/doc/${documentId}`;
   };
 
@@ -87,6 +94,7 @@ export default function Home() {
             onUploadStart={() => setProcessingState("uploading")}
             onProcessingStart={() => setProcessingState("processing")}
             onUploadComplete={handleFileUploaded}
+            onError={() => setProcessingState("idle")}
             data-testid="file-upload-section"
           />
         )}
