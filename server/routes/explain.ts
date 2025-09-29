@@ -22,8 +22,9 @@ export const postExplain = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Document not found" });
     }
 
-    // Check payment status before allowing processing
-    if (document.paymentStatus !== "paid") {
+    // Check payment status before allowing processing (skip in development)
+    const isDevelopment = process.env.NODE_ENV === "development";
+    if (!isDevelopment && document.paymentStatus !== "paid") {
       return res.status(402).json({ 
         error: "Payment required", 
         message: "Please complete payment to access document processing features",
