@@ -99,7 +99,8 @@ app.use((req, res, next) => {
         return res.status(403).json({ error: "Unauthorized access to document" });
       }
 
-      if (document.paymentStatus !== "paid") {
+      const isDevelopment = process.env.NODE_ENV === "development";
+      if (!isDevelopment && document.paymentStatus !== "paid") {
         return res.status(402).json({ 
           error: "Payment required", 
           message: "Please complete payment to access document processing features",
@@ -148,7 +149,8 @@ app.use((req, res, next) => {
         return res.status(403).json({ error: "Unauthorized access to document" });
       }
 
-      if (document.paymentStatus !== "paid") {
+      const isDevelopment = process.env.NODE_ENV === "development";
+      if (!isDevelopment && document.paymentStatus !== "paid") {
         return res.status(402).json({ 
           error: "Payment required", 
           message: "Please complete payment to access document processing features",
@@ -199,7 +201,8 @@ app.use((req, res, next) => {
         return res.status(403).json({ error: "Unauthorized access to document" });
       }
 
-      if (document.paymentStatus !== "paid") {
+      const isDevelopment = process.env.NODE_ENV === "development";
+      if (!isDevelopment && document.paymentStatus !== "paid") {
         return res.status(402).json({ 
           error: "Payment required", 
           message: "Please complete payment to access document processing features",
