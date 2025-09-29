@@ -7,7 +7,7 @@ export default function DisclaimerBanner() {
   if (!isVisible) return null;
 
   return (
-    <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-4 py-4 border-b-4 border-red-700 shadow-lg">
+    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-4 border-b-4 border-blue-700 shadow-lg">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -25,7 +25,7 @@ export default function DisclaimerBanner() {
                 <br />
                 <strong>AI may make mistakes or misinterpret complex information.</strong>
                 <br />
-                <span className="text-red-100">
+                <span className="text-blue-100">
                   Always verify AI-generated explanations and consult with a licensed attorney, doctor, or other qualified professional for guidance specific to your situation.
                 </span>
               </p>
@@ -42,8 +42,8 @@ export default function DisclaimerBanner() {
         </div>
         
         {/* Additional emphasis */}
-        <div className="mt-4 pt-3 border-t border-red-400/30">
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-red-100">
+        <div className="mt-4 pt-3 border-t border-blue-400/30">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-blue-100">
             <span>🤖 AI may make errors</span>
             <span>📋 Not professional advice</span>
             <span>⚖️ Not a substitute for legal counsel</span> 
