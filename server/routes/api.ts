@@ -92,12 +92,13 @@ router.post('/process', upload.single('file'), async (req, res) => {
     }
 
     // Use OpenAI for better processing
-    const systemPrompt = `You turn documents into three outputs:
+    const systemPrompt = `You turn documents into four outputs:
 1) SUMMARY: 120-200 word executive summary in plain language.
-2) GLOSSARY: 5-12 key technical terms with clear one-line definitions.
-3) ACTION ITEMS: bullet list of actionable next steps.
+2) KEY POINTS: 3-7 most important points as short bullet points (array of strings).
+3) GLOSSARY: 5-12 key technical terms with clear one-line definitions (array of {term, definition}).
+4) ACTION ITEMS: bullet list of actionable next steps (array of strings).
 
-Format your response as JSON with these exact keys: summary, glossary (array of {term, definition}), actionItems (array of strings).`;
+Format your response as JSON with these exact keys: summary (string), keyPoints (array of strings), glossary (array of {term, definition}), actionItems (array of strings).`;
 
     const userMessage = `Document text:\n\n${text.substring(0, 12000)}`;
 
@@ -118,20 +119,21 @@ Format your response as JSON with these exact keys: summary, glossary (array of 
     let parsed;
     try {
       parsed = JSON.parse(rawResponse);
+      console.log('Parsed keys:', Object.keys(parsed));
     } catch (e) {
       console.error('Failed to parse OpenAI response:', e);
-      parsed = { summary: rawResponse, glossary: [], actionItems: [] };
+      parsed = { summary: rawResponse, keyPoints: [], glossary: [], actionItems: [] };
     }
 
     const result = {
       summary: parsed.summary || '',
-      keyPoints: parsed.keyPoints || [],
+      keyPoints: parsed.keyPoints || parsed.key_points || [],
       glossary: Array.isArray(parsed.glossary) ? parsed.glossary : [],
-      actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
+      actionItems: parsed.actionItems || parsed.action_items || [],
       raw: rawResponse
     };
 
-    console.log('Processing complete, sending response');
+    console.log('Processing complete, sending response with', result.keyPoints.length, 'key points');
     res.json(result);
 
   } catch (e: any) {
