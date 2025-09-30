@@ -1,9 +1,10 @@
 import { Router } from "express";
 import multer from "multer";
-import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import Tesseract from "tesseract.js";
 import OpenAI from "openai";
+import { DocumentProcessor } from "../services/documentProcessor";
+import { OCRService } from "../services/ocrService";
 
 const router = Router();
 const upload = multer({
@@ -12,6 +13,8 @@ const upload = multer({
 });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
+const documentProcessor = new DocumentProcessor();
+const ocrService = new OCRService();
 
 router.post('/process', upload.single('file'), async (req, res) => {
   try {
@@ -30,24 +33,20 @@ router.post('/process', upload.single('file'), async (req, res) => {
     // Extract text based on file type
     if (mime.includes('pdf')) {
       console.log('Extracting PDF text...');
-      const result = await pdfParse(buf);
+      const result = await documentProcessor.extractTextFromPDF(buf);
       text = result.text || '';
       console.log(`PDF extraction complete: ${text.length} characters`);
     } else if (mime.includes('word') || mime.includes('docx') || mime.includes('document')) {
       console.log('Extracting DOCX text...');
-      const result = await mammoth.extractRawText({ buffer: buf });
-      text = result.value || '';
+      text = await documentProcessor.extractTextFromDOCX(buf);
       console.log(`DOCX extraction complete: ${text.length} characters`);
     } else if (mime.startsWith('image/')) {
       console.log('Running OCR on image...');
-      const { data } = await Tesseract.recognize(buf, 'eng', {
-        logger: () => {}
-      });
-      text = data.text || '';
+      text = await ocrService.extractTextFromImage(buf, mime);
       console.log(`OCR complete: ${text.length} characters`);
     } else if (mime.includes('plain') || mime.includes('text')) {
       console.log('Reading plain text...');
-      text = buf.toString('utf8');
+      text = documentProcessor.extractTextFromTXT(buf);
       console.log(`Text file read: ${text.length} characters`);
     } else {
       return res.status(415).json({ error: `Unsupported file type: ${mime}` });
