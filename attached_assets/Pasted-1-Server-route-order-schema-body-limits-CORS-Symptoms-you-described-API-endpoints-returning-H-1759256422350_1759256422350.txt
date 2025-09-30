@@ -1,0 +1,274 @@
+1) Server: route order, schema, body limits, CORS
+
+Symptoms you described: API endpoints returning HTML (likely the SPA catch-all is intercepting), and the Supabase path docexplain.users (schema/table mixup).
+
+Actions:
+
+Mount all /api/* routes before serving the client build or any * catch-all.
+
+Increase JSON body limit (summaries can get chunky).
+
+Add CORS (dev convenience).
+
+Fix Supabase schema calls: use .schema("docexplain").from("users") instead of .from("docexplain.users").
+
+server/services/supa.ts (ensure this shape):
+
+// server/services/supa.ts
+import { createClient } from '@supabase/supabase-js';
+
+const url = process.env.SUPABASE_URL!;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // service key needed for server-side
+export const supa = createClient(url, serviceKey, {
+  auth: { persistSession: false },
+});
+
+
+server/index.ts (top-level wiring):
+
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import apiRouter from './routes/api.js'; // create this if not present
+
+const app = express();
+
+app.use(cors());
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// --- API FIRST (important to avoid HTML responses for JSON routes) ---
+app.use('/api', apiRouter);
+
+// Optional: quick health + supabase test
+import { supa } from './services/supa.js';
+app.get('/test-conn', async (_req, res) => {
+  try {
+    const { data, error } = await supa
+      .schema('docexplain')
+      .from('users')
+      .select('*')
+      .limit(1);
+    if (error) throw error;
+    res.json({ ok: true, sample: data ?? [] });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// --- Static client (after API) ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distPath = path.resolve(__dirname, '../client/dist');
+
+app.use(express.static(distPath));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
+const port = process.env.PORT || 5000;
+app.listen(port, () => console.log(`Server on :${port}`));
+
+2) Server: upload + processing pipeline
+
+We’ll support PDF/DOCX/images and return JSON {summary, glossary, actionItems}.
+
+Install (if not already):
+
+npm i multer pdf-parse mammoth tesseract.js@^5 openai
+
+
+server/routes/api.ts (or .js with ESM imports)
+
+import { Router } from 'express';
+import multer from 'multer';
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
+import Tesseract from 'tesseract.js';
+import { supa } from '../services/supa.js';
+import OpenAI from 'openai';
+
+const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+
+router.post('/process', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const buf = req.file.buffer;
+    const mime = req.file.mimetype.toLowerCase();
+
+    let text = '';
+    if (mime.includes('pdf')) {
+      const out = await pdfParse(buf);
+      text = out.text;
+    } else if (mime.includes('word') || mime.includes('docx')) {
+      const out = await mammoth.extractRawText({ buffer: buf });
+      text = out.value || '';
+    } else if (mime.startsWith('image/')) {
+      // OCR as fallback (uses eng.traineddata already present in repo root)
+      const { data } = await Tesseract.recognize(
+        buf,
+        'eng',
+        { logger: () => {}, langPath: './' } // eng.traineddata in root
+      );
+      text = data.text || '';
+    } else if (mime.includes('plain')) {
+      text = buf.toString('utf8');
+    } else {
+      return res.status(415).json({ error: `Unsupported file type: ${mime}` });
+    }
+
+    if (!text.trim()) return res.status(422).json({ error: 'Could not extract text' });
+
+    // Build prompts
+    const sys = `You turn documents into three outputs: 
+1) 120-200 word executive SUMMARY.
+2) GLOSSARY: 5-12 key terms with one-line definitions.
+3) ACTION ITEMS: bullet list with owners + due dates if stated in text.`;
+
+    const userMsg = `Document text:\n\n${text.substring(0, 12000)}`;
+
+    const chat = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: sys },
+        { role: 'user', content: userMsg }
+      ],
+      temperature: 0.2
+    });
+
+    const raw = chat.choices[0]?.message?.content ?? '';
+
+    // Simple parse (we can keep it raw for now)
+    const result = { summary: '', glossary: [], actionItems: [], raw };
+
+    // Optional persist to Supabase (adjust table/columns as needed)
+    // await supa.schema('docexplain').from('documents').insert({
+    //   original_name: req.file.originalname,
+    //   mime,
+    //   text,
+    //   outputs: result
+    // });
+
+    res.json(result);
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+export default router;
+
+3) Client: call /api/process correctly and render results
+
+In your upload page/component, make sure you’re posting FormData to /api/process and then setting state with the JSON response. A blank “Summary / Glossary / Action Items” usually means the client awaited a 200 that actually returned HTML (see fix #1).
+
+React snippet for the upload view:
+
+const [busy, setBusy] = useState(false);
+const [result, setResult] = useState<{summary?: string; glossary?: any; actionItems?: any; raw?: string}>({});
+
+async function onUpload(file: File) {
+  setBusy(true);
+  setResult({});
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+
+    const r = await fetch('/api/process', { method: 'POST', body: fd });
+    const ct = r.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      const text = await r.text();
+      throw new Error(`Expected JSON, got: ${ct}. Payload: ${text.slice(0, 200)}`);
+    }
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${r.status}`);
+    }
+    const json = await r.json();
+    setResult(json);
+  } catch (e: any) {
+    alert(e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+
+UI rendering (very basic):
+
+{busy && <p>Processing…</p>}
+{!busy && result.summary && (
+  <>
+    <h2>Summary</h2>
+    <p>{result.summary || result.raw}</p>
+
+    <h2>Glossary</h2>
+    <ul>
+      {(result.glossary ?? []).map((g: any, i: number) => <li key={i}>{typeof g === 'string' ? g : JSON.stringify(g)}</li>)}
+    </ul>
+
+    <h2>Action Items</h2>
+    <ul>
+      {(result.actionItems ?? []).map((a: any, i: number) => <li key={i}>{typeof a === 'string' ? a : JSON.stringify(a)}</li>)}
+    </ul>
+  </>
+)}
+
+4) Vite dev proxy (to avoid CORS in dev)
+
+If you’re running client and server separately in dev, add a proxy so fetch('/api/...') works.
+
+client/vite.config.ts:
+
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': { target: 'http://localhost:5000', changeOrigin: true }
+    }
+  }
+});
+
+5) .env required keys (server)
+
+Create /server/.env (or project root and load it) with:
+
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+OPENAI_API_KEY=...
+NODE_ENV=development
+
+6) Common “blank pane” causes checklist
+
+Catch-all before API → HTML instead of JSON. (Fixed in #1)
+
+Wrong upload field name (must be file to match upload.single('file')).
+
+Missing JSON parse (we handled with content-type check).
+
+Supabase schema path wrong (use .schema("docexplain").from("users")).
+
+CORS during dev (proxy/CORS added).
+
+Huge files (25MB cap added; adjust as needed).
+
+7) Beta scope (ship this today)
+
+Accept PDF/DOCX/PNG/JPG/TXT.
+
+Extract text → summarize with OpenAI → return JSON.
+
+Nice, reliable UI that shows outputs and allows download JSON.
+
+Log errors to console; show friendly toast to user.
+
+(Optional) Save each run in docexplain.documents with text, outputs, filename.

@@ -6,6 +6,7 @@ import { uploadInit, uploadComplete } from "./routes/upload";
 import { getDoc, getDocText, getLatestDocId } from "./routes/read";
 import { postExplain, getExplanation } from "./routes/explain";
 import docsRouter from "./routes/docs";
+import apiRouter from "./routes/api";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { OpenAIService } from "./services/openai";
@@ -23,8 +24,8 @@ const openaiService = new OpenAIService();
 const documentProcessor = new DocumentProcessor();
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -71,6 +72,9 @@ app.use((req, res, next) => {
 
   // Simplified docs upload route
   app.use("/api/docs", docsRouter);
+
+  // Main processing route (consolidated)
+  app.use("/api", apiRouter);
 
   // Session management
   app.post("/api/session", async (req, res) => {
