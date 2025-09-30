@@ -40,8 +40,14 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
+    console.log(`Processing file: ${req.file.originalname}, type: ${req.file.mimetype}, size: ${req.file.size} bytes`);
     const text = await extractText(req.file.path, req.file.originalname);
     await fs.unlink(req.file.path).catch(() => {});
+    
+    console.log(`Extracted text length: ${text?.length || 0} characters`);
+    if (text && text.trim()) {
+      console.log(`First 100 chars: ${text.slice(0, 100)}`);
+    }
     
     if (!text || !text.trim()) {
       return res.json({
