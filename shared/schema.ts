@@ -37,6 +37,15 @@ export const qaInteractions = pgTable("qa_interactions", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+export const usageTracking = pgTable("usage_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ipAddress: text("ip_address").notNull().unique(),
+  documentCount: integer("document_count").notNull().default(0),
+  monthYear: text("month_year").notNull(), // Format: "YYYY-MM"
+  lastResetAt: timestamp("last_reset_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
 export const insertDocumentSchema = createInsertSchema(documents).omit({
   id: true,
   createdAt: true,
@@ -48,12 +57,20 @@ export const insertQASchema = createInsertSchema(qaInteractions).omit({
   createdAt: true,
 });
 
+export const insertUsageTrackingSchema = createInsertSchema(usageTracking).omit({
+  id: true,
+  lastResetAt: true,
+  updatedAt: true,
+});
+
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Document = typeof documents.$inferSelect;
 export type InsertQA = z.infer<typeof insertQASchema>;
 export type QAInteraction = typeof qaInteractions.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
+export type UsageTracking = typeof usageTracking.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,

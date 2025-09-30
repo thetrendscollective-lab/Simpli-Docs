@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Document, type InsertDocument, type QAInteraction, type InsertQA } from "@shared/schema";
+import { type User, type InsertUser, type Document, type InsertDocument, type QAInteraction, type InsertQA, type UsageTracking, type InsertUsageTracking } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -29,17 +29,24 @@ export interface IStorage {
   
   // Get latest document
   getLatestDocument(): Promise<Document | undefined>;
+  
+  // Usage tracking methods
+  getUsageByIP(ipAddress: string): Promise<UsageTracking | undefined>;
+  incrementUsage(ipAddress: string): Promise<UsageTracking>;
+  checkUsageLimit(ipAddress: string, monthlyLimit: number): Promise<{ allowed: boolean; remaining: number }>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private documents: Map<string, Document>;
   private qaInteractions: Map<string, QAInteraction>;
+  private usageTracking: Map<string, UsageTracking>;
 
   constructor() {
     this.users = new Map();
     this.documents = new Map();
     this.qaInteractions = new Map();
+    this.usageTracking = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -154,9 +161,61 @@ export class MemStorage implements IStorage {
     if (allDocs.length === 0) return undefined;
     
     // Sort by creation time (most recent first)
-    return allDocs.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )[0];
+    return allDocs.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    })[0];
+  }
+
+  async getUsageByIP(ipAddress: string): Promise<UsageTracking | undefined> {
+    return this.usageTracking.get(ipAddress);
+  }
+
+  async incrementUsage(ipAddress: string): Promise<UsageTracking> {
+    const currentDate = new Date();
+    const currentMonthYear = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    let usage = this.usageTracking.get(ipAddress);
+    
+    if (!usage || usage.monthYear !== currentMonthYear) {
+      // Create new usage record or reset for new month
+      const id = randomUUID();
+      usage = {
+        id,
+        ipAddress,
+        documentCount: 1,
+        monthYear: currentMonthYear,
+        lastResetAt: currentDate,
+        updatedAt: currentDate
+      };
+    } else {
+      // Increment existing count
+      usage = {
+        ...usage,
+        documentCount: usage.documentCount + 1,
+        updatedAt: currentDate
+      };
+    }
+    
+    this.usageTracking.set(ipAddress, usage);
+    return usage;
+  }
+
+  async checkUsageLimit(ipAddress: string, monthlyLimit: number): Promise<{ allowed: boolean; remaining: number }> {
+    const currentDate = new Date();
+    const currentMonthYear = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    const usage = this.usageTracking.get(ipAddress);
+    
+    // If no usage record or it's from a previous month, allow and reset
+    if (!usage || usage.monthYear !== currentMonthYear) {
+      return { allowed: true, remaining: monthlyLimit - 1 };
+    }
+    
+    // Check if under limit
+    const remaining = Math.max(0, monthlyLimit - usage.documentCount);
+    return { allowed: usage.documentCount < monthlyLimit, remaining };
   }
 }
 
