@@ -71,7 +71,7 @@ export default function SimpleUpload() {
             </p>
           </div>
 
-        <Card className="mb-6">
+          <Card className="mb-6">
           <CardHeader>
             <CardTitle>Upload Your Document</CardTitle>
           </CardHeader>
@@ -105,9 +105,9 @@ export default function SimpleUpload() {
               />
             </label>
           </CardContent>
-        </Card>
+          </Card>
 
-        {loading && (
+          {loading && (
           <Card>
             <CardContent className="py-8">
               <div className="flex items-center justify-center">
@@ -116,9 +116,9 @@ export default function SimpleUpload() {
               </div>
             </CardContent>
           </Card>
-        )}
+          )}
 
-        {error && (
+          {error && (
           <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
             <CardContent className="py-6">
               <div className="text-red-600 dark:text-red-400" data-testid="text-error">
@@ -126,9 +126,9 @@ export default function SimpleUpload() {
               </div>
             </CardContent>
           </Card>
-        )}
+          )}
 
-        {result && (
+          {result && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -204,7 +204,7 @@ export default function SimpleUpload() {
               </CardContent>
             </Card>
           </div>
-        )}
+          )}
         </div>
       </div>
     </div>
