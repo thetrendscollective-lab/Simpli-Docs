@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, Loader2 } from "lucide-react";
+import DisclaimerBanner from "@/components/DisclaimerBanner";
 
 export default function SimpleUpload() {
   const [result, setResult] = useState<{
@@ -59,14 +60,16 @@ export default function SimpleUpload() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">Simpli-Docs</h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            Transform complex documents into clear, understandable language
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <DisclaimerBanner />
+      <div className="p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">Simpli-Docs</h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              Transform complex documents into clear, understandable language
+            </p>
+          </div>
 
         <Card className="mb-6">
           <CardHeader>
@@ -202,6 +205,7 @@ export default function SimpleUpload() {
             </Card>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
