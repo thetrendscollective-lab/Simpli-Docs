@@ -25,8 +25,15 @@ router.post('/process', upload.single('file'), async (req, res) => {
     const buf = req.file.buffer;
     const mime = req.file.mimetype.toLowerCase();
     const fileName = req.file.originalname;
+    
+    // Validate and sanitize reading level input
+    const rawLevel = req.body.level || 'standard';
+    const level: 'simple' | 'standard' | 'detailed' = 
+      ['simple', 'standard', 'detailed'].includes(rawLevel) 
+        ? rawLevel as 'simple' | 'standard' | 'detailed'
+        : 'standard';
 
-    console.log(`Processing file: ${fileName}, type: ${mime}, size: ${req.file.size} bytes`);
+    console.log(`Processing file: ${fileName}, type: ${mime}, size: ${req.file.size} bytes, level: ${level}`);
 
     let text = '';
 
@@ -88,17 +95,37 @@ router.post('/process', upload.single('file'), async (req, res) => {
         "Consult with relevant professionals if needed"
       ];
 
-      return res.json({ summary, keyPoints, glossary, actionItems, raw: summary });
+      return res.json({ summary, keyPoints, glossary, actionItems, readingLevelUsed: level, raw: summary });
     }
 
     // Use OpenAI for better processing
-    const systemPrompt = `You turn documents into four outputs:
-1) SUMMARY: 120-200 word executive summary in plain language.
-2) KEY POINTS: 3-7 most important points as short bullet points (array of strings).
-3) GLOSSARY: 5-12 key technical terms with clear one-line definitions (array of {term, definition}).
-4) ACTION ITEMS: bullet list of actionable next steps (array of strings).
+    const guidance =
+      level === 'simple'
+        ? `Write for a typical 5th grader. Use very short sentences (average 8-12 words). Replace all legal or financial jargon with everyday words. Avoid complex numbers. Add tiny examples where helpful. Keep vocabulary basic and concrete.`
+        : level === 'detailed'
+        ? `Write for a professional adult with domain expertise. Use longer, compound sentences (average 18-25 words). Include technical terminology with precise clarifications. Provide comprehensive context, relevant nuances, and important caveats. Be thorough and detailed rather than brief.`
+        : `Write for a general reader (8th–10th grade). Use moderate sentences (12-16 words average). Use clear, plain language and avoid unnecessary jargon. Be concise but informative.`;
 
-Format your response as JSON with these exact keys: summary (string), keyPoints (array of strings), glossary (array of {term, definition}), actionItems (array of strings).`;
+    const systemPrompt = `You extract structured outputs from documents.
+Return strict JSON with this shape:
+{
+  "summary": "120-200 words executive summary at the specified reading level",
+  "keyPoints": ["3-7 concise bullets"],
+  "glossary": [{"term":"...","definition":"..."}],
+  "actionItems": ["actionable next steps"],
+  "readingLevelUsed": "${level}"
+}
+
+CRITICAL READING LEVEL REQUIREMENTS:
+${guidance}
+
+Additional rules:
+- For summary: STRICTLY follow the reading level guidance above regarding sentence length and vocabulary complexity.
+- For keyPoints: Keep bullets under ~20 words but adjust complexity to match reading level.
+- For glossary: Adjust definition complexity to match reading level.
+- For actionItems: Be specific and actionable, with vocabulary appropriate to reading level.
+
+Format your response as JSON with these exact keys: summary (string), keyPoints (array of strings), glossary (array of {term, definition}), actionItems (array of strings), readingLevelUsed (string).`;
 
     const userMessage = `Document text:\n\n${text.substring(0, 12000)}`;
 
@@ -122,7 +149,23 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
       console.log('Parsed keys:', Object.keys(parsed));
     } catch (e) {
       console.error('Failed to parse OpenAI response:', e);
-      parsed = { summary: rawResponse, keyPoints: [], glossary: [], actionItems: [] };
+      parsed = { summary: rawResponse, keyPoints: [], glossary: [], actionItems: [], readingLevelUsed: level };
+    }
+
+    // Simplify glossary for "simple" reading level
+    if (parsed.glossary && level === 'simple') {
+      parsed.glossary = parsed.glossary.map((g: any) => ({
+        term: g.term,
+        definition: String(g.definition)
+          .replace(/\b(income)\b/gi, 'money you earn')
+          .replace(/\b(liabilities)\b/gi, 'debts you owe')
+          .replace(/\b(assets)\b/gi, 'things you own that have value')
+          .replace(/\b(exemptions?)\b/gi, 'special deductions that lower taxable income')
+          .replace(/\b(perjury)\b/gi, 'lying under oath (a crime)')
+          .replace(/\b(deductions?)\b/gi, 'amounts subtracted from income')
+          .replace(/\b(petitioner)\b/gi, 'person who files the request')
+          .replace(/\b(respondent)\b/gi, 'person who responds to the request')
+      }));
     }
 
     const result = {
@@ -130,10 +173,11 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
       keyPoints: parsed.keyPoints || parsed.key_points || [],
       glossary: Array.isArray(parsed.glossary) ? parsed.glossary : [],
       actionItems: parsed.actionItems || parsed.action_items || [],
+      readingLevelUsed: parsed.readingLevelUsed || level,
       raw: rawResponse
     };
 
-    console.log('Processing complete, sending response with', result.keyPoints.length, 'key points');
+    console.log('Processing complete, sending response with', result.keyPoints.length, 'key points at', level, 'level');
     res.json(result);
 
   } catch (e: any) {
