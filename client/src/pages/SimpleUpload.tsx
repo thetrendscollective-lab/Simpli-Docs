@@ -21,14 +21,23 @@ export default function SimpleUpload() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const resp = await fetch("/api/docs/upload", {
+      const resp = await fetch("/api/process", {
         method: "POST",
         body: form
       });
+
+      // Check content type
+      const contentType = resp.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await resp.text();
+        throw new Error(`Expected JSON, got: ${contentType}. Response: ${text.slice(0, 200)}`);
+      }
+
       const data = await resp.json();
       if (!resp.ok) {
-        throw new Error(data.error || "Upload failed");
+        throw new Error(data.error || `Upload failed with status ${resp.status}`);
       }
+
       setResult({
         summary: data.summary || "",
         keyPoints: data.keyPoints || [],
