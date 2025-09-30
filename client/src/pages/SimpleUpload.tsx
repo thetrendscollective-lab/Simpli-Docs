@@ -10,9 +10,11 @@ export default function SimpleUpload() {
     keyPoints: string[];
     glossary: { term: string; definition: string }[];
     actionItems: string[];
+    readingLevelUsed?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [level, setLevel] = useState<'simple' | 'standard' | 'detailed'>('standard');
 
   async function uploadFile(file: File) {
     setLoading(true);
@@ -22,6 +24,7 @@ export default function SimpleUpload() {
     try {
       const form = new FormData();
       form.append("file", file);
+      form.append("level", level);
       const resp = await fetch("/api/process", {
         method: "POST",
         body: form
@@ -43,7 +46,8 @@ export default function SimpleUpload() {
         summary: data.summary || "",
         keyPoints: data.keyPoints || [],
         glossary: data.glossary || [],
-        actionItems: data.actionItems || []
+        actionItems: data.actionItems || [],
+        readingLevelUsed: data.readingLevelUsed
       });
     } catch (e: any) {
       setError(e.message || "Unknown error");
@@ -75,6 +79,24 @@ export default function SimpleUpload() {
           <CardHeader>
             <CardTitle>Upload Your Document</CardTitle>
           </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <label htmlFor="reading-level" className="block text-sm font-medium mb-2">
+                Reading Level
+              </label>
+              <select
+                id="reading-level"
+                value={level}
+                onChange={(e) => setLevel(e.target.value as 'simple' | 'standard' | 'detailed')}
+                className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600"
+                data-testid="select-reading-level"
+              >
+                <option value="simple">Simple (5th grade) - Plain language, short sentences</option>
+                <option value="standard">Standard (8th-10th grade) - Clear, general language</option>
+                <option value="detailed">Detailed (Professional) - Full context, technical terms allowed</option>
+              </select>
+            </div>
+          </CardContent>
           <CardContent>
             <label
               htmlFor="file-upload"
@@ -130,6 +152,11 @@ export default function SimpleUpload() {
 
           {result && (
           <div className="space-y-6">
+            {result.readingLevelUsed && (
+              <div className="text-sm text-slate-500 dark:text-slate-400 text-center" data-testid="text-reading-level">
+                Reading level: <span className="font-semibold capitalize">{result.readingLevelUsed}</span>
+              </div>
+            )}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

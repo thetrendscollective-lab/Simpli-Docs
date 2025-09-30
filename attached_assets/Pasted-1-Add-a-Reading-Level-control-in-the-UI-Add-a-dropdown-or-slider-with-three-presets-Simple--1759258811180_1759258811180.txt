@@ -1,0 +1,88 @@
+1) Add a “Reading Level” control in the UI
+
+Add a dropdown (or slider) with three presets:
+
+Simple (5th grade) – plain language, short sentences, zero jargon
+
+Standard (8th–10th grade) – what you have now
+
+Detailed (professional) – fuller context, light jargon allowed
+
+// In your upload component (client)
+const [level, setLevel] = useState<'simple'|'standard'|'detailed'>('standard');
+
+<select value={level} onChange={e => setLevel(e.target.value as any)}>
+  <option value="simple">Simple (5th grade)</option>
+  <option value="standard">Standard (8th–10th)</option>
+  <option value="detailed">Detailed (professional)</option>
+</select>
+
+// when uploading:
+fd.append('level', level);
+
+2) Pass level to the server and tailor the prompt
+
+Update your /api/process route to read req.body.level (for JSON uploads) or FormData (req.body.level still works with multer) and condition the instructions.
+
+// server/routes/api.ts (inside POST /process)
+const level = (req.body.level || 'standard') as 'simple'|'standard'|'detailed';
+
+const guidance =
+  level === 'simple'
+    ? `Write for a typical 5th grader. Use short sentences (max 12–16 words). Replace legal or financial jargon with everyday words. Avoid numbers unless essential. Add tiny examples where helpful.`
+    : level === 'detailed'
+    ? `Write for a professional adult. You may use light domain terms with brief clarifications. Include nuance and relevant caveats when they improve accuracy.`
+    : `Write for a general reader (8th–10th grade). Use clear, plain language and avoid jargon.`;
+
+// … keep your extraction code, then build the system prompt:
+const sys = `You extract structured outputs from documents.
+Return strict JSON with this shape:
+{
+  "summary": "120-200 words executive summary.",
+  "keyPoints": ["3-7 concise bullets"],
+  "glossary": [{"term":"...","definition":"..."}],
+  "actionItems": [{"description":"...","owner":null,"dueDate":null}],
+  "readingLevelUsed": "${level}"
+}
+
+Style rules:
+- ${guidance}
+- Prefer everyday words.
+- If owner/due date not stated, set null.
+- Keep bullets under ~20 words.
+`;
+
+// … then call OpenAI with response_format: { type: 'json_object' } as before
+
+3) Make glossary extra plain on “Simple”
+
+Still on the server, right after parsing the model’s JSON, soften glossary if level==='simple':
+
+if (parsed.glossary && level === 'simple') {
+  parsed.glossary = parsed.glossary.map((g: any) => ({
+    term: g.term,
+    definition: String(g.definition)
+      .replace(/\b(income\b.*?taxes?|liabilities|assets|exemptions?)\b/gi, (m) => {
+        // tiny friendly tweaks
+        const repl: any = {
+          income: 'money you earn',
+          liabilities: 'debts you owe',
+          assets: 'things you own that have value',
+          exemptions: 'special deductions that lower taxable income'
+        };
+        return repl[m.toLowerCase()] ?? m;
+      })
+      .replace(/\bperjury\b/gi, 'lying under oath (a crime)')
+  }));
+}
+
+4) Show which level was used in the UI
+{result.readingLevelUsed && (
+  <p className="muted">Reading level: {result.readingLevelUsed}</p>
+)}
+
+5) Optional niceties (fast wins)
+
+Micro-examples in “Simple” summaries (already encouraged via guidance).
+
+Sentence length guard: if you want to enforce brevity, you can post-process the summary by splitting on periods and rejoining sentences longer than ~18 words—totally optional.
