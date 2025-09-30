@@ -5,6 +5,7 @@ import Tesseract from "tesseract.js";
 import OpenAI from "openai";
 import { DocumentProcessor } from "../services/documentProcessor";
 import { OCRService } from "../services/ocrService";
+import { storage } from "../storage";
 
 const router = Router();
 const upload = multer({
@@ -16,10 +17,37 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const documentProcessor = new DocumentProcessor();
 const ocrService = new OCRService();
 
+const MONTHLY_FREE_LIMIT = 2; // 2 documents per month for free users
+
+// Helper function to get client IP address
+function getClientIP(req: any): string {
+  return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+         req.headers['x-real-ip'] ||
+         req.connection?.remoteAddress ||
+         req.socket?.remoteAddress ||
+         req.ip ||
+         'unknown';
+}
+
 router.post('/process', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Check usage limits
+    const clientIP = getClientIP(req);
+    console.log(`Request from IP: ${clientIP}`);
+    
+    const usageCheck = await storage.checkUsageLimit(clientIP, MONTHLY_FREE_LIMIT);
+    
+    if (!usageCheck.allowed) {
+      return res.status(429).json({ 
+        error: 'Monthly limit reached',
+        message: `You've reached your free limit of ${MONTHLY_FREE_LIMIT} documents per month. Please upgrade to continue.`,
+        remaining: 0,
+        limit: MONTHLY_FREE_LIMIT
+      });
     }
 
     const buf = req.file.buffer;
@@ -95,7 +123,22 @@ router.post('/process', upload.single('file'), async (req, res) => {
         "Consult with relevant professionals if needed"
       ];
 
-      return res.json({ summary, keyPoints, glossary, actionItems, readingLevelUsed: level, raw: summary });
+      // Increment usage for fallback as well
+      await storage.incrementUsage(clientIP);
+      const updatedUsage = await storage.checkUsageLimit(clientIP, MONTHLY_FREE_LIMIT);
+
+      return res.json({ 
+        summary, 
+        keyPoints, 
+        glossary, 
+        actionItems, 
+        readingLevelUsed: level, 
+        raw: summary,
+        usage: {
+          remaining: updatedUsage.remaining,
+          limit: MONTHLY_FREE_LIMIT
+        }
+      });
     }
 
     // Use OpenAI for better processing
@@ -177,12 +220,41 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
       raw: rawResponse
     };
 
+    // Increment usage count after successful processing
+    await storage.incrementUsage(clientIP);
+    const updatedUsage = await storage.checkUsageLimit(clientIP, MONTHLY_FREE_LIMIT);
+    
     console.log('Processing complete, sending response with', result.keyPoints.length, 'key points at', level, 'level');
-    res.json(result);
+    console.log(`Usage: ${MONTHLY_FREE_LIMIT - updatedUsage.remaining}/${MONTHLY_FREE_LIMIT}, Remaining: ${updatedUsage.remaining}`);
+    
+    res.json({
+      ...result,
+      usage: {
+        remaining: updatedUsage.remaining,
+        limit: MONTHLY_FREE_LIMIT
+      }
+    });
 
   } catch (e: any) {
     console.error('Processing error:', e);
     res.status(500).json({ error: e.message || 'Processing failed' });
+  }
+});
+
+// Get usage information for current user
+router.get('/usage', async (req, res) => {
+  try {
+    const clientIP = getClientIP(req);
+    const usageCheck = await storage.checkUsageLimit(clientIP, MONTHLY_FREE_LIMIT);
+    
+    res.json({
+      remaining: usageCheck.remaining,
+      limit: MONTHLY_FREE_LIMIT,
+      used: MONTHLY_FREE_LIMIT - usageCheck.remaining
+    });
+  } catch (e: any) {
+    console.error('Usage check error:', e);
+    res.status(500).json({ error: 'Failed to check usage' });
   }
 });
 

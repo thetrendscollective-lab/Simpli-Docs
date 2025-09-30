@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, Loader2 } from "lucide-react";
@@ -11,10 +11,30 @@ export default function SimpleUpload() {
     glossary: { term: string; definition: string }[];
     actionItems: string[];
     readingLevelUsed?: string;
+    usage?: { remaining: number; limit: number };
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [level, setLevel] = useState<'simple' | 'standard' | 'detailed'>('standard');
+  const [usage, setUsage] = useState<{ remaining: number; limit: number; used: number } | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
+
+  // Fetch usage on component mount
+  useEffect(() => {
+    async function fetchUsage() {
+      try {
+        const resp = await fetch('/api/usage');
+        if (resp.ok) {
+          const data = await resp.json();
+          setUsage(data);
+          setLimitReached(data.remaining === 0);
+        }
+      } catch (e) {
+        console.error('Failed to fetch usage:', e);
+      }
+    }
+    fetchUsage();
+  }, []);
 
   async function uploadFile(file: File) {
     setLoading(true);
@@ -38,6 +58,15 @@ export default function SimpleUpload() {
       }
 
       const data = await resp.json();
+      
+      // Handle limit reached
+      if (resp.status === 429) {
+        setError(data.message || "You've reached your monthly limit");
+        setLimitReached(true);
+        setUsage({ remaining: 0, limit: data.limit || 2, used: data.limit || 2 });
+        return;
+      }
+      
       if (!resp.ok) {
         throw new Error(data.error || `Upload failed with status ${resp.status}`);
       }
@@ -47,8 +76,19 @@ export default function SimpleUpload() {
         keyPoints: data.keyPoints || [],
         glossary: data.glossary || [],
         actionItems: data.actionItems || [],
-        readingLevelUsed: data.readingLevelUsed
+        readingLevelUsed: data.readingLevelUsed,
+        usage: data.usage
       });
+      
+      // Update usage info
+      if (data.usage) {
+        setUsage({
+          remaining: data.usage.remaining,
+          limit: data.usage.limit,
+          used: data.usage.limit - data.usage.remaining
+        });
+        setLimitReached(data.usage.remaining === 0);
+      }
     } catch (e: any) {
       setError(e.message || "Unknown error");
     } finally {
@@ -73,7 +113,35 @@ export default function SimpleUpload() {
             <p className="text-slate-600 dark:text-slate-400">
               Transform complex documents into clear, understandable language
             </p>
+            {usage && (
+              <div className="mt-4 inline-block" data-testid="usage-counter">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Free documents: <span className="font-semibold">{usage.remaining}/{usage.limit}</span> remaining this month
+                </p>
+              </div>
+            )}
           </div>
+
+          {limitReached && (
+            <Card className="mb-6 border-amber-300 bg-amber-50 dark:bg-amber-900/20" data-testid="limit-reached-card">
+              <CardContent className="py-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                    Free Limit Reached
+                  </h3>
+                  <p className="text-amber-700 dark:text-amber-400 mb-4">
+                    You've used all {usage?.limit || 2} free documents for this month. Upgrade to continue processing documents.
+                  </p>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    data-testid="button-upgrade"
+                  >
+                    Upgrade Now
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="mb-6">
           <CardHeader>

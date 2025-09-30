@@ -206,14 +206,24 @@ export class MemStorage implements IStorage {
     const currentDate = new Date();
     const currentMonthYear = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
     
-    const usage = this.usageTracking.get(ipAddress);
+    let usage = this.usageTracking.get(ipAddress);
     
-    // If no usage record or it's from a previous month, allow and reset
+    // If no usage record or it's from a previous month, create/reset the record
     if (!usage || usage.monthYear !== currentMonthYear) {
-      return { allowed: true, remaining: monthlyLimit - 1 };
+      const id = randomUUID();
+      usage = {
+        id,
+        ipAddress,
+        documentCount: 0,
+        monthYear: currentMonthYear,
+        lastResetAt: currentDate,
+        updatedAt: currentDate
+      };
+      this.usageTracking.set(ipAddress, usage);
+      return { allowed: true, remaining: monthlyLimit };
     }
     
-    // Check if under limit
+    // Check if under limit based on existing usage
     const remaining = Math.max(0, monthlyLimit - usage.documentCount);
     return { allowed: usage.documentCount < monthlyLimit, remaining };
   }
