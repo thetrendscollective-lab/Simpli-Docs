@@ -114,7 +114,8 @@ export default function SimpleUpload() {
               <img 
                 src={logoPath} 
                 alt="Simpli-Docs" 
-                className="h-16 w-auto"
+                className="h-20 w-auto"
+                style={{ filter: 'brightness(0.85) contrast(1.2)' }}
                 data-testid="img-logo"
               />
               <sup className="text-[10px] ml-0.5 text-slate-500 dark:text-slate-400">™</sup>

@@ -39,7 +39,8 @@ export default function Header({ language, onLanguageChange }: HeaderProps) {
               <img 
                 src={logoPath} 
                 alt="Simpli-Docs" 
-                className="h-12 w-auto"
+                className="h-14 w-auto"
+                style={{ filter: 'brightness(0.85) contrast(1.2)' }}
                 data-testid="img-logo"
               />
               <sup className="text-[9px] ml-0.5 text-muted-foreground">™</sup>
