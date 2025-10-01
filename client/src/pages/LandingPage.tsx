@@ -29,6 +29,7 @@ import {
   X
 } from "lucide-react";
 import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
+import { handleUpgrade } from "@/lib/handleUpgrade";
 
 export default function LandingPage() {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
@@ -43,25 +44,9 @@ export default function LandingPage() {
 
     setIsCheckoutLoading(true);
     try {
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ tier }),
-      });
-
-      const data = await response.json();
-      
-      if (data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL received');
-      }
+      await handleUpgrade(tier as 'standard' | 'pro' | 'family');
     } catch (error) {
       console.error('Error creating checkout session:', error);
-      alert('Failed to start checkout. Please try again.');
       setIsCheckoutLoading(false);
     }
   };

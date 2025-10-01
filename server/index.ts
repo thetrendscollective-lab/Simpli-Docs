@@ -7,6 +7,7 @@ import { getDoc, getDocText, getLatestDocId } from "./routes/read";
 import { postExplain, getExplanation } from "./routes/explain";
 import docsRouter from "./routes/docs";
 import apiRouter from "./routes/api";
+import stripeRouter from "./routes/stripe";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { OpenAIService } from "./services/openai";
@@ -75,6 +76,9 @@ app.use((req, res, next) => {
 
   // Main processing route (consolidated)
   app.use("/api", apiRouter);
+
+  // Stripe routes
+  app.use("/api/stripe", stripeRouter);
 
   // Session management
   app.post("/api/session", async (req, res) => {

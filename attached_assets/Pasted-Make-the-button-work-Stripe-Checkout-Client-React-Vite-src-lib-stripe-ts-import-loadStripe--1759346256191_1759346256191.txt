@@ -1,0 +1,79 @@
+Make the button work (Stripe Checkout)
+Client (React/Vite)
+// src/lib/stripe.ts
+import { loadStripe } from '@stripe/stripe-js';
+export const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
+
+// src/constants/prices.ts
+export const PRICE_ID = {
+  standard: 'price_1SDDKUClhBp5wD3K7bEUJPzu',   // $9.99
+  pro:      'price_1SDDL0ClhBp5wD3KCrHPkJbi',   // $24.99
+  family:   'price_1SDDLsClhBp5wD3KAdRBKaSm',   // $39.99
+};
+
+// wherever the banner button lives
+import { stripePromise } from '@/lib/stripe';
+import { PRICE_ID } from '@/constants/prices';
+
+async function handleUpgrade(plan: keyof typeof PRICE_ID = 'standard') {
+  console.log('upgrade clicked', plan);
+  const res = await fetch('/api/stripe/create-checkout-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ priceId: PRICE_ID[plan] }),
+  });
+
+  const data = await res.json();
+  if (data?.url) {
+    // Prefer direct redirect if available
+    window.location.href = data.url;
+    return;
+  }
+
+  const stripe = await stripePromise;
+  const { error } = await stripe!.redirectToCheckout({ sessionId: data.id });
+  if (error) alert(error.message);
+}
+
+// JSX
+<button type="button" onClick={() => handleUpgrade('standard')}>
+  Upgrade Now
+</button>
+
+
+Important: ensure the button is type="button" (not submit), and that no absolute/transparent overlay sits above it (pointer-events:none on overlays).
+
+Server (Node/Express)
+// server/routes/stripe.ts
+import express from 'express';
+import Stripe from 'stripe';
+
+const router = express.Router();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' });
+
+router.post('/api/stripe/create-checkout-session', async (req, res) => {
+  try {
+    const { priceId } = req.body;
+    if (!priceId) return res.status(400).json({ error: 'Missing priceId' });
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      allow_promotion_codes: true,
+      billing_address_collection: 'auto',
+      success_url: `${process.env.PUBLIC_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.PUBLIC_URL}/billing/cancel`,
+      // optional if you have auth:
+      // customer_email: req.user?.email,
+      metadata: { app: 'simplidocs' },
+    });
+
+    // Return both; client will prefer `url`
+    res.json({ id: session.id, url: session.url });
+  } catch (e: any) {
+    console.error('create-checkout-session error', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+export default router;
