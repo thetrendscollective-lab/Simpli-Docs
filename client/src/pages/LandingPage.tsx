@@ -28,6 +28,7 @@ import {
   Play,
   X
 } from "lucide-react";
+import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
 
 export default function LandingPage() {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
@@ -228,9 +229,13 @@ export default function LandingPage() {
       <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <FileText className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-foreground">Simpli-Docs</span>
+            <div className="flex items-center">
+              <img 
+                src={logoPath} 
+                alt="Simpli-Docs" 
+                className="h-10 w-auto"
+                data-testid="img-logo"
+              />
             </div>
             <div className="flex items-center space-x-4">
               <Link to="/upload">
