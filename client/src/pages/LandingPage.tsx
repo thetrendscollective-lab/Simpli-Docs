@@ -31,6 +31,39 @@ import {
 
 export default function LandingPage() {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+
+  const handleSubscribe = async (priceId: string | null) => {
+    if (!priceId) {
+      // Free tier - just go to upload page
+      window.location.href = '/upload';
+      return;
+    }
+
+    setIsCheckoutLoading(true);
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ priceId }),
+      });
+
+      const data = await response.json();
+      
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      alert('Failed to start checkout. Please try again.');
+      setIsCheckoutLoading(false);
+    }
+  };
 
   const features = [
     {
@@ -135,7 +168,8 @@ export default function LandingPage() {
         "Email support"
       ],
       cta: "Start Free",
-      popular: false
+      popular: false,
+      priceId: null
     },
     {
       name: "Standard", 
@@ -150,7 +184,8 @@ export default function LandingPage() {
         "Priority support"
       ],
       cta: "Start Standard",
-      popular: true
+      popular: true,
+      priceId: "price_1SDDKUClhBp5wD3K7bEUJPzu"
     },
     {
       name: "Pro",
@@ -166,7 +201,8 @@ export default function LandingPage() {
         "Branded PDF exports"
       ],
       cta: "Start Pro", 
-      popular: false
+      popular: false,
+      priceId: "price_1SDDL0ClhBp5wD3KCrHPkJbi"
     },
     {
       name: "Family",
@@ -181,7 +217,8 @@ export default function LandingPage() {
         "Caregiver dashboard"
       ],
       cta: "Start Family",
-      popular: false
+      popular: false,
+      priceId: "price_1SDDLsClhBp5wD3KAdRBKaSm"
     }
   ];
 
@@ -497,15 +534,15 @@ export default function LandingPage() {
                     ))}
                   </ul>
                   
-                  <Link to="/upload">
-                    <Button 
-                      className="w-full" 
-                      variant={tier.popular ? "default" : "outline"}
-                      data-testid={`button-${tier.cta.toLowerCase().replace(' ', '-')}`}
-                    >
-                      {tier.cta}
-                    </Button>
-                  </Link>
+                  <Button 
+                    className="w-full" 
+                    variant={tier.popular ? "default" : "outline"}
+                    data-testid={`button-${tier.cta.toLowerCase().replace(' ', '-')}`}
+                    onClick={() => handleSubscribe(tier.priceId)}
+                    disabled={isCheckoutLoading}
+                  >
+                    {isCheckoutLoading ? 'Loading...' : tier.cta}
+                  </Button>
                 </CardContent>
               </Card>
             ))}

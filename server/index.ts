@@ -87,6 +87,39 @@ app.use((req, res, next) => {
     }
   });
 
+  // Stripe subscription checkout
+  app.post("/api/create-checkout-session", async (req, res) => {
+    try {
+      const { priceId } = req.body;
+      
+      if (!priceId) {
+        return res.status(400).json({ error: "Price ID is required" });
+      }
+
+      const origin = req.headers.origin || `http://localhost:5000`;
+      
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ 
+        error: "Error creating checkout session: " + getErrorMessage(error) 
+      });
+    }
+  });
+
   // Document processing routes
   app.post("/api/documents/:id/summarize", async (req, res) => {
     try {
