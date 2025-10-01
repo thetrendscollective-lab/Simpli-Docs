@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { type Document } from "@shared/schema";
 import TabNavigation from "@/components/TabNavigation";
@@ -8,6 +8,9 @@ import GlossaryTab from "@/components/GlossaryTab";
 import OriginalTextTab from "@/components/OriginalTextTab";
 import QASidebar from "@/components/QASidebar";
 import PaymentFlow from "@/components/PaymentFlow";
+import { queryClient } from "@/lib/queryClient";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface DocumentDashboardProps {
   documentId: string;
@@ -18,6 +21,8 @@ interface DocumentDashboardProps {
 
 export default function DocumentDashboard({ documentId, language, sessionId, onDelete }: DocumentDashboardProps) {
   const [activeTab, setActiveTab] = useState<"summary" | "glossary" | "original">("summary");
+  const [readingLevel, setReadingLevel] = useState<'simple' | 'standard' | 'detailed'>('standard');
+  const [regeneratedContent, setRegeneratedContent] = useState<any>(null);
   const { toast } = useToast();
 
   const { data: document, isLoading } = useQuery<Document>({
@@ -38,6 +43,46 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
       return response.json();
     }
   });
+
+  const regenerateMutation = useMutation({
+    mutationFn: async (level: 'simple' | 'standard' | 'detailed') => {
+      const response = await fetch(`/api/documents/${documentId}/regenerate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-id': sessionId
+        },
+        body: JSON.stringify({ readingLevel: level, language }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setRegeneratedContent(data);
+      toast({
+        title: "Reading level changed",
+        description: `Document regenerated at ${readingLevel} level.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to regenerate",
+        description: error.message || "Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleReadingLevelChange = (value: string) => {
+    const level = value as 'simple' | 'standard' | 'detailed';
+    setReadingLevel(level);
+    regenerateMutation.mutate(level);
+  };
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
@@ -170,13 +215,52 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
           </div>
         </div>
 
+        {/* Reading Level Selector */}
+        <div className="bg-card border border-border rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-4">
+            <div className="flex-grow">
+              <Label htmlFor="reading-level-selector" className="text-sm font-medium mb-2 block">
+                Reading Level Dropdown
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Choose from Simple to Professional, with a level in between
+              </p>
+              <Select 
+                value={readingLevel} 
+                onValueChange={handleReadingLevelChange}
+                disabled={regenerateMutation.isPending}
+              >
+                <SelectTrigger id="reading-level-selector" className="w-full" data-testid="select-reading-level">
+                  <SelectValue placeholder="Select reading level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="simple">Simple (5th grade) - Plain language, short sentences</SelectItem>
+                  <SelectItem value="standard">Standard (8th-10th grade) - Clear, general language</SelectItem>
+                  <SelectItem value="detailed">Professional - Full context, technical terms allowed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {regenerateMutation.isPending && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                Regenerating...
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Tabbed Content */}
         <div className="bg-card border border-border rounded-lg">
           <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
           
           <div className="p-6 tab-content">
             {activeTab === "summary" && (
-              <SummaryTab documentId={documentId} language={language} sessionId={sessionId} />
+              <SummaryTab 
+                documentId={documentId} 
+                language={language} 
+                sessionId={sessionId}
+                regeneratedContent={regeneratedContent}
+              />
             )}
             {activeTab === "glossary" && (
               <GlossaryTab documentId={documentId} language={language} sessionId={sessionId} />
