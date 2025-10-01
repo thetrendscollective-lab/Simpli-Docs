@@ -236,6 +236,7 @@ export default function LandingPage() {
                 className="h-10 w-auto"
                 data-testid="img-logo"
               />
+              <sup className="text-[8px] ml-0.5 text-muted-foreground">™</sup>
             </div>
             <div className="flex items-center space-x-4">
               <Link to="/upload">
