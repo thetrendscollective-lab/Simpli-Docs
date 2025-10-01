@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import Tooltip from "@/components/Tooltip";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { type Document } from "@shared/schema";
+import { FileText, Languages, AlertCircle, ChevronRight } from "lucide-react";
 
 interface SummaryTabProps {
   documentId: string;
@@ -20,11 +23,10 @@ interface DocumentSummary {
 
 export default function SummaryTab({ documentId, language, sessionId }: SummaryTabProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [sideBySideView, setSideBySideView] = useState(false);
 
   const { data: summary, isLoading } = useQuery({
-    queryKey: ["/api/documents", documentId, "summary", language],
+    queryKey: ["/api/documents", documentId, "summary", language, sessionId],
     queryFn: async () => {
       const response = await fetch(`/api/documents/${documentId}/summarize`, {
         method: 'POST',
@@ -43,6 +45,25 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
       return await response.json() as DocumentSummary;
     },
     enabled: !!documentId,
+  });
+
+  const { data: document, isLoading: isDocumentLoading, isError: isDocumentError, error: documentError, refetch: refetchDocument } = useQuery<Document>({
+    queryKey: ["/api/documents", documentId, sessionId],
+    enabled: !!documentId && !!sessionId && sideBySideView,
+    queryFn: async () => {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        headers: {
+          'x-session-id': sessionId
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    }
   });
 
   const toggleSection = (sectionId: string) => {
@@ -79,19 +100,8 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
     { term: "hypertension", definition: "High blood pressure. This means the force of blood against your artery walls is higher than it should be." }
   ];
 
-  const addTooltips = (text: string) => {
-    let processedText = text;
-    tooltipTerms.forEach(({ term, definition }) => {
-      const regex = new RegExp(`\\b${term}\\b`, 'gi');
-      processedText = processedText.replace(regex, (match) => 
-        `<Tooltip term="${match}" definition="${definition}" />`
-      );
-    });
-    return processedText;
-  };
-
-  return (
-    <div className="space-y-6" data-testid="summary-content">
+  const summaryContent = (
+    <div className="space-y-6">
       {/* Main Summary */}
       <div className="bg-accent/50 border border-border rounded-lg p-4">
         <h3 className="text-lg font-semibold text-foreground mb-3">Document Summary</h3>
@@ -126,9 +136,9 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
               data-testid="section-key-findings"
             >
               <div className="flex items-center space-x-3">
-                <i className={`fas fa-chevron-right section-expander text-muted-foreground transition-transform ${
+                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${
                   expandedSections.has('keyFindings') ? 'rotate-90' : ''
-                }`}></i>
+                }`} />
                 <h4 className="font-semibold text-foreground">Key Findings & Results</h4>
               </div>
               <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Multiple Pages</span>
@@ -157,9 +167,9 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
               data-testid="section-recommendations"
             >
               <div className="flex items-center space-x-3">
-                <i className={`fas fa-chevron-right section-expander text-muted-foreground transition-transform ${
+                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${
                   expandedSections.has('recommendations') ? 'rotate-90' : ''
-                }`}></i>
+                }`} />
                 <h4 className="font-semibold text-foreground">Recommendations</h4>
               </div>
               <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Page 3</span>
@@ -188,9 +198,9 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
               data-testid="section-next-steps"
             >
               <div className="flex items-center space-x-3">
-                <i className={`fas fa-chevron-right section-expander text-muted-foreground transition-transform ${
+                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${
                   expandedSections.has('nextSteps') ? 'rotate-90' : ''
-                }`}></i>
+                }`} />
                 <h4 className="font-semibold text-foreground">Next Steps</h4>
               </div>
               <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Page 3</span>
@@ -219,9 +229,9 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
               data-testid="section-risk-flags"
             >
               <div className="flex items-center space-x-3">
-                <i className={`fas fa-chevron-right section-expander text-muted-foreground transition-transform ${
+                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${
                   expandedSections.has('riskFlags') ? 'rotate-90' : ''
-                }`}></i>
+                }`} />
                 <h4 className="font-semibold text-destructive">⚠️ Important Notices</h4>
               </div>
             </button>
@@ -240,6 +250,83 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
           </div>
         )}
       </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4" data-testid="summary-content">
+      {/* Side-by-Side Toggle */}
+      <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-lg">
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="side-by-side-toggle" className="text-sm font-medium cursor-pointer">
+            Side-by-Side View
+          </Label>
+          <span className="text-xs text-muted-foreground">Compare original with plain English</span>
+        </div>
+        <Switch
+          id="side-by-side-toggle"
+          checked={sideBySideView}
+          onCheckedChange={setSideBySideView}
+          data-testid="toggle-side-by-side"
+        />
+      </div>
+
+      {/* Content Display */}
+      {sideBySideView ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Original Text */}
+          <div className="bg-muted/30 border border-border rounded-lg p-4" data-testid="original-text-pane">
+            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
+              <FileText className="h-5 w-5 mr-2" />
+              Original Document
+            </h3>
+            <div className="bg-card border border-border rounded p-4 max-h-[600px] overflow-y-auto" data-testid="text-original">
+              {isDocumentLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                  <span className="ml-2 text-sm text-muted-foreground">Loading original text...</span>
+                </div>
+              ) : isDocumentError ? (
+                <div className="text-center p-4">
+                  <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+                  <p className="text-sm text-destructive mb-3">
+                    Failed to load original text: {documentError?.message || 'Unknown error'}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => refetchDocument()}
+                    data-testid="button-retry-original"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : document?.originalText ? (
+                <pre className="text-sm text-foreground font-mono leading-relaxed whitespace-pre-wrap">
+                  {document.originalText}
+                </pre>
+              ) : (
+                <p className="text-muted-foreground text-sm text-center p-4">
+                  No extracted text available for this document.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Plain English Summary */}
+          <div className="bg-accent/30 border border-border rounded-lg p-4" data-testid="summary-pane">
+            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center">
+              <Languages className="h-5 w-5 mr-2" />
+              Plain English
+            </h3>
+            <div className="max-h-[600px] overflow-y-auto" data-testid="text-summary">
+              {summaryContent}
+            </div>
+          </div>
+        </div>
+      ) : (
+        summaryContent
+      )}
     </div>
   );
 }
