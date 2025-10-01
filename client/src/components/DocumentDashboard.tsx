@@ -263,7 +263,12 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
               />
             )}
             {activeTab === "glossary" && (
-              <GlossaryTab documentId={documentId} language={language} sessionId={sessionId} />
+              <GlossaryTab 
+                documentId={documentId} 
+                language={language} 
+                sessionId={sessionId}
+                regeneratedContent={regeneratedContent}
+              />
             )}
             {activeTab === "original" && (
               <OriginalTextTab document={{
