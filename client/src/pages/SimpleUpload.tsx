@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, Loader2 } from "lucide-react";
 import DisclaimerBanner from "@/components/DisclaimerBanner";
+import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
 
 export default function SimpleUpload() {
   const [result, setResult] = useState<{
@@ -109,7 +110,14 @@ export default function SimpleUpload() {
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">Simpli-Docs</h1>
+            <div className="flex justify-center mb-4">
+              <img 
+                src={logoPath} 
+                alt="Simpli-Docs" 
+                className="h-16 w-auto"
+                data-testid="img-logo"
+              />
+            </div>
             <p className="text-slate-600 dark:text-slate-400">
               Transform complex documents into clear, understandable language
             </p>

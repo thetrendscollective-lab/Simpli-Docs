@@ -1,3 +1,5 @@
+import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
+
 interface HeaderProps {
   language: string;
   onLanguageChange: (language: string) => void;
@@ -32,9 +34,14 @@ export default function Header({ language, onLanguageChange }: HeaderProps) {
     <header className="bg-card border-b border-border shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Simpli-Docs</h1>
-            <p className="text-muted-foreground mt-1">Transform complex legal and medical documents into clear, understandable language</p>
+          <div className="flex items-center space-x-4">
+            <img 
+              src={logoPath} 
+              alt="Simpli-Docs" 
+              className="h-12 w-auto"
+              data-testid="img-logo"
+            />
+            <p className="text-muted-foreground">Transform complex legal and medical documents into clear, understandable language</p>
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative">
