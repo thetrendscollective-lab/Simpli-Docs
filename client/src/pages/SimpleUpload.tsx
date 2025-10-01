@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, Loader2 } from "lucide-react";
 import DisclaimerBanner from "@/components/DisclaimerBanner";
 import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
+import { handleUpgrade } from "@/lib/handleUpgrade";
 
 export default function SimpleUpload() {
   const [result, setResult] = useState<{
@@ -143,14 +144,14 @@ export default function SimpleUpload() {
                   <p className="text-amber-700 dark:text-amber-400 mb-4">
                     You've used all {usage?.limit || 2} free documents for this month. Upgrade to continue processing documents.
                   </p>
-                  <Link href="/">
-                    <Button 
-                      className="bg-blue-600 hover:bg-blue-700"
-                      data-testid="button-upgrade"
-                    >
-                      Upgrade Now
-                    </Button>
-                  </Link>
+                  <Button 
+                    type="button"
+                    className="bg-blue-600 hover:bg-blue-700"
+                    data-testid="button-upgrade"
+                    onClick={() => handleUpgrade('standard')}
+                  >
+                    Upgrade Now
+                  </Button>
                 </div>
               </CardContent>
             </Card>
