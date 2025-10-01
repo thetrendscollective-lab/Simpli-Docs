@@ -5,15 +5,16 @@ interface GlossaryTabProps {
   documentId: string;
   language: string;
   sessionId: string;
+  regeneratedContent?: any;
 }
 
 interface GlossaryTerm {
   term: string;
   definition: string;
-  pageRefs: number[];
+  pageRefs?: number[];
 }
 
-export default function GlossaryTab({ documentId, language, sessionId }: GlossaryTabProps) {
+export default function GlossaryTab({ documentId, language, sessionId, regeneratedContent }: GlossaryTabProps) {
   const { data: glossary, isLoading } = useQuery({
     queryKey: ["/api/documents", documentId, "glossary", language],
     queryFn: async () => {
@@ -45,7 +46,10 @@ export default function GlossaryTab({ documentId, language, sessionId }: Glossar
     );
   }
 
-  if (!glossary || glossary.length === 0) {
+  // Use regenerated glossary if available
+  const displayGlossary = regeneratedContent?.glossary || glossary;
+
+  if (!displayGlossary || displayGlossary.length === 0) {
     return (
       <div className="text-center p-8">
         <p className="text-muted-foreground">No technical terms found in the document.</p>
@@ -56,10 +60,10 @@ export default function GlossaryTab({ documentId, language, sessionId }: Glossar
   return (
     <div className="space-y-4" data-testid="glossary-content">
       <h3 className="text-lg font-semibold text-foreground mb-4">
-        Technical Terms Explained ({glossary.length} terms)
+        Technical Terms Explained ({displayGlossary.length} terms)
       </h3>
       
-      {glossary.map((term, index) => (
+      {displayGlossary.map((term: GlossaryTerm, index: number) => (
         <div key={index} className="border border-border rounded-lg p-4">
           <div className="flex items-start justify-between">
             <div className="flex-1">
