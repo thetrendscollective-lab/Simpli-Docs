@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, Loader2 } from "lucide-react";
@@ -142,13 +143,14 @@ export default function SimpleUpload() {
                   <p className="text-amber-700 dark:text-amber-400 mb-4">
                     You've used all {usage?.limit || 2} free documents for this month. Upgrade to continue processing documents.
                   </p>
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={() => window.location.href = '/'}
-                    data-testid="button-upgrade"
-                  >
-                    Upgrade Now
-                  </Button>
+                  <Link href="/">
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      data-testid="button-upgrade"
+                    >
+                      Upgrade Now
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
