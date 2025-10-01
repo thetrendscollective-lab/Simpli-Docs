@@ -33,8 +33,8 @@ export default function LandingPage() {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
 
-  const handleSubscribe = async (priceId: string | null) => {
-    if (!priceId) {
+  const handleSubscribe = async (tier: string | null) => {
+    if (!tier) {
       // Free tier - just go to upload page
       window.location.href = '/upload';
       return;
@@ -47,7 +47,7 @@ export default function LandingPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ tier }),
       });
 
       const data = await response.json();
@@ -159,6 +159,7 @@ export default function LandingPage() {
   const pricingTiers = [
     {
       name: "Free",
+      tier: null,
       price: "Free",
       description: "Perfect for trying out Simpli-Docs",
       features: [
@@ -168,11 +169,11 @@ export default function LandingPage() {
         "Email support"
       ],
       cta: "Start Free",
-      popular: false,
-      priceId: null
+      popular: false
     },
     {
       name: "Standard", 
+      tier: "standard",
       price: "$9.99",
       period: "/month",
       description: "For individuals and small teams",
@@ -184,11 +185,11 @@ export default function LandingPage() {
         "Priority support"
       ],
       cta: "Start Standard",
-      popular: true,
-      priceId: "price_1SDDKUClhBp5wD3K7bEUJPzu"
+      popular: true
     },
     {
       name: "Pro",
+      tier: "pro",
       price: "$24.99", 
       period: "/month",
       description: "For power users and professionals",
@@ -201,11 +202,11 @@ export default function LandingPage() {
         "Branded PDF exports"
       ],
       cta: "Start Pro", 
-      popular: false,
-      priceId: "price_1SDDL0ClhBp5wD3KCrHPkJbi"
+      popular: false
     },
     {
       name: "Family",
+      tier: "family",
       price: "$39.99",
       period: "/month", 
       description: "For families and caregivers",
@@ -217,8 +218,7 @@ export default function LandingPage() {
         "Caregiver dashboard"
       ],
       cta: "Start Family",
-      popular: false,
-      priceId: "price_1SDDLsClhBp5wD3KAdRBKaSm"
+      popular: false
     }
   ];
 
@@ -538,7 +538,7 @@ export default function LandingPage() {
                     className="w-full" 
                     variant={tier.popular ? "default" : "outline"}
                     data-testid={`button-${tier.cta.toLowerCase().replace(' ', '-')}`}
-                    onClick={() => handleSubscribe(tier.priceId)}
+                    onClick={() => handleSubscribe(tier.tier)}
                     disabled={isCheckoutLoading}
                   >
                     {isCheckoutLoading ? 'Loading...' : tier.cta}

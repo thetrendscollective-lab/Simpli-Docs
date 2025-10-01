@@ -90,10 +90,39 @@ app.use((req, res, next) => {
   // Stripe subscription checkout
   app.post("/api/create-checkout-session", async (req, res) => {
     try {
-      const { priceId } = req.body;
+      const { tier } = req.body;
       
+      console.log('Checkout session request:', { tier });
+      console.log('Environment variables:', {
+        PRICE_STANDARD: process.env.PRICE_STANDARD ? 'set' : 'NOT SET',
+        PRICE_PRO: process.env.PRICE_PRO ? 'set' : 'NOT SET',
+        PRICE_FAMILY: process.env.PRICE_FAMILY ? 'set' : 'NOT SET'
+      });
+      
+      if (!tier) {
+        return res.status(400).json({ error: "Tier is required" });
+      }
+
+      // Map tier to environment variable price ID
+      let priceId: string | undefined;
+      switch (tier.toLowerCase()) {
+        case 'standard':
+          priceId = process.env.PRICE_STANDARD;
+          break;
+        case 'pro':
+          priceId = process.env.PRICE_PRO;
+          break;
+        case 'family':
+          priceId = process.env.PRICE_FAMILY;
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid tier. Must be standard, pro, or family" });
+      }
+
+      console.log('Selected price ID for tier', tier, ':', priceId ? 'found' : 'NOT FOUND');
+
       if (!priceId) {
-        return res.status(400).json({ error: "Price ID is required" });
+        return res.status(500).json({ error: `Price ID not configured for ${tier} tier. Please set PRICE_${tier.toUpperCase()} environment variable.` });
       }
 
       const origin = req.headers.origin || `http://localhost:5000`;
