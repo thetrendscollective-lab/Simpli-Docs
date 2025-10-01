@@ -35,12 +35,15 @@ export default function Header({ language, onLanguageChange }: HeaderProps) {
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <img 
-              src={logoPath} 
-              alt="Simpli-Docs" 
-              className="h-12 w-auto"
-              data-testid="img-logo"
-            />
+            <div className="flex items-center">
+              <img 
+                src={logoPath} 
+                alt="Simpli-Docs" 
+                className="h-12 w-auto"
+                data-testid="img-logo"
+              />
+              <sup className="text-[9px] ml-0.5 text-muted-foreground">™</sup>
+            </div>
             <p className="text-muted-foreground">Transform complex legal and medical documents into clear, understandable language</p>
           </div>
           <div className="flex items-center space-x-4">

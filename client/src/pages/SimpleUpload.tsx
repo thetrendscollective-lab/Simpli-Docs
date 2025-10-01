@@ -110,13 +110,14 @@ export default function SimpleUpload() {
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center items-start mb-4">
               <img 
                 src={logoPath} 
                 alt="Simpli-Docs" 
                 className="h-16 w-auto"
                 data-testid="img-logo"
               />
+              <sup className="text-[10px] ml-0.5 text-slate-500 dark:text-slate-400">™</sup>
             </div>
             <p className="text-slate-600 dark:text-slate-400">
               Transform complex documents into clear, understandable language
