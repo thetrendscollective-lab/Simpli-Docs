@@ -11,6 +11,7 @@ interface SummaryTabProps {
   documentId: string;
   language: string;
   sessionId: string;
+  regeneratedContent?: any;
 }
 
 interface DocumentSummary {
@@ -21,7 +22,7 @@ interface DocumentSummary {
   riskFlags: string[];
 }
 
-export default function SummaryTab({ documentId, language, sessionId }: SummaryTabProps) {
+export default function SummaryTab({ documentId, language, sessionId, regeneratedContent }: SummaryTabProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [sideBySideView, setSideBySideView] = useState(false);
 
@@ -85,13 +86,25 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
     );
   }
 
-  if (!summary) {
+  // Use regenerated content if available, otherwise use the summary from the query
+  const displayContent = regeneratedContent || summary;
+
+  if (!displayContent) {
     return (
       <div className="text-center p-8">
         <p className="text-muted-foreground">Failed to generate summary. Please try again.</p>
       </div>
     );
   }
+
+  // Convert regenerated content format to DocumentSummary format if needed
+  const displaySummary: DocumentSummary = regeneratedContent ? {
+    overview: regeneratedContent.summary || '',
+    keyFindings: regeneratedContent.keyPoints || [],
+    recommendations: regeneratedContent.actionItems || [],
+    nextSteps: [],
+    riskFlags: []
+  } : summary!;
 
   // Sample terms for tooltip demonstration
   const tooltipTerms = [
@@ -106,7 +119,7 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
       <div className="bg-accent/50 border border-border rounded-lg p-4">
         <h3 className="text-lg font-semibold text-foreground mb-3">Document Summary</h3>
         <div className="text-foreground leading-relaxed">
-          {summary.overview.split(' ').map((word, index) => {
+          {displaySummary.overview.split(' ').map((word, index) => {
             const tooltipTerm = tooltipTerms.find(t => 
               t.term.toLowerCase() === word.toLowerCase().replace(/[.,!?;]/, '')
             );
@@ -128,7 +141,7 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
       {/* Expandable Sections */}
       <div className="space-y-4">
         {/* Key Findings */}
-        {summary.keyFindings && summary.keyFindings.length > 0 && (
+        {displaySummary.keyFindings && displaySummary.keyFindings.length > 0 && (
           <div className="border border-border rounded-lg">
             <button 
               className="w-full p-4 text-left flex items-center justify-between hover:bg-muted/30 transition-colors"
@@ -146,7 +159,7 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
             {expandedSections.has('keyFindings') && (
               <div className="p-4 pt-0 border-t border-border">
                 <ul className="space-y-2 text-foreground">
-                  {summary.keyFindings.map((finding, index) => (
+                  {displaySummary.keyFindings.map((finding, index) => (
                     <li key={index} className="flex items-start space-x-2">
                       <span className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></span>
                       <span>{finding}</span>
@@ -159,7 +172,7 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
         )}
 
         {/* Recommendations */}
-        {summary.recommendations && summary.recommendations.length > 0 && (
+        {displaySummary.recommendations && displaySummary.recommendations.length > 0 && (
           <div className="border border-border rounded-lg">
             <button 
               className="w-full p-4 text-left flex items-center justify-between hover:bg-muted/30 transition-colors"
@@ -177,7 +190,7 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
             {expandedSections.has('recommendations') && (
               <div className="p-4 pt-0 border-t border-border">
                 <ul className="space-y-2 text-foreground">
-                  {summary.recommendations.map((recommendation, index) => (
+                  {displaySummary.recommendations.map((recommendation, index) => (
                     <li key={index} className="flex items-start space-x-2">
                       <span className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></span>
                       <span>{recommendation}</span>
@@ -190,7 +203,7 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
         )}
 
         {/* Next Steps */}
-        {summary.nextSteps && summary.nextSteps.length > 0 && (
+        {displaySummary.nextSteps && displaySummary.nextSteps.length > 0 && (
           <div className="border border-border rounded-lg">
             <button 
               className="w-full p-4 text-left flex items-center justify-between hover:bg-muted/30 transition-colors"
@@ -208,7 +221,7 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
             {expandedSections.has('nextSteps') && (
               <div className="p-4 pt-0 border-t border-border">
                 <ul className="space-y-2 text-foreground">
-                  {summary.nextSteps.map((step, index) => (
+                  {displaySummary.nextSteps.map((step, index) => (
                     <li key={index} className="flex items-start space-x-2">
                       <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
                       <span>{step}</span>
@@ -221,7 +234,7 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
         )}
 
         {/* Risk Flags */}
-        {summary.riskFlags && summary.riskFlags.length > 0 && (
+        {displaySummary.riskFlags && displaySummary.riskFlags.length > 0 && (
           <div className="border border-destructive/20 bg-destructive/5 rounded-lg">
             <button 
               className="w-full p-4 text-left flex items-center justify-between hover:bg-destructive/10 transition-colors"
@@ -238,7 +251,7 @@ export default function SummaryTab({ documentId, language, sessionId }: SummaryT
             {expandedSections.has('riskFlags') && (
               <div className="p-4 pt-0 border-t border-destructive/20">
                 <ul className="space-y-2 text-foreground">
-                  {summary.riskFlags.map((risk, index) => (
+                  {displaySummary.riskFlags.map((risk, index) => (
                     <li key={index} className="flex items-start space-x-2">
                       <span className="w-2 h-2 bg-destructive rounded-full mt-2 flex-shrink-0"></span>
                       <span>{risk}</span>
