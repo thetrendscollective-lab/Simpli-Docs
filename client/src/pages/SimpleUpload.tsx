@@ -144,6 +144,7 @@ export default function SimpleUpload() {
                   </p>
                   <Button 
                     className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => window.location.href = '/'}
                     data-testid="button-upgrade"
                   >
                     Upgrade Now
