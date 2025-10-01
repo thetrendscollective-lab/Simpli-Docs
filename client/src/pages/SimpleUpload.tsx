@@ -150,8 +150,11 @@ export default function SimpleUpload() {
           <CardContent>
             <div className="mb-4">
               <label htmlFor="reading-level" className="block text-sm font-medium mb-2">
-                Reading Level
+                Reading Level Dropdown
               </label>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                Choose from Simple to Professional, with a level in between
+              </p>
               <select
                 id="reading-level"
                 value={level}
@@ -161,7 +164,7 @@ export default function SimpleUpload() {
               >
                 <option value="simple">Simple (5th grade) - Plain language, short sentences</option>
                 <option value="standard">Standard (8th-10th grade) - Clear, general language</option>
-                <option value="detailed">Detailed (Professional) - Full context, technical terms allowed</option>
+                <option value="detailed">Professional - Full context, technical terms allowed</option>
               </select>
             </div>
           </CardContent>
