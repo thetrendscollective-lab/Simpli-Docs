@@ -18,7 +18,7 @@ export default function SimpleUpload() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [level, setLevel] = useState<'simple' | 'standard' | 'detailed'>('standard');
+  const [level, setLevel] = useState<'simple' | 'standard' | 'detailed'>('simple');
   const [usage, setUsage] = useState<{ remaining: number; limit: number; used: number } | null>(null);
   const [limitReached, setLimitReached] = useState(false);
 
