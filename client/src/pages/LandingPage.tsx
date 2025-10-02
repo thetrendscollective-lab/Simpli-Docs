@@ -489,8 +489,11 @@ export default function LandingPage() {
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Pricing That Feels Fair
             </h2>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-muted-foreground mb-2">
               Start free, upgrade when you need more features
+            </p>
+            <p className="text-sm text-muted-foreground max-w-2xl mx-auto bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <strong>Subscription Note:</strong> Paid plans are monthly subscriptions. Your card will be charged automatically each month. Cancel anytime from your account settings - no questions asked.
             </p>
           </div>
 
@@ -535,6 +538,12 @@ export default function LandingPage() {
                   >
                     {isCheckoutLoading ? 'Loading...' : tier.cta}
                   </Button>
+                  
+                  {tier.tier && (
+                    <p className="text-xs text-center text-muted-foreground mt-3">
+                      Billed monthly • Cancel anytime
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ))}
