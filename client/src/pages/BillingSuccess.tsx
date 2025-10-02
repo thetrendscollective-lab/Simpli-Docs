@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, ArrowRight } from "lucide-react";
 import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
 
 export default function BillingSuccess() {
-  const [, setLocation] = useLocation();
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,7 +54,7 @@ export default function BillingSuccess() {
                 </p>
               )}
               <div className="pt-6">
-                <Link href="/upload">
+                <Link to="/upload">
                   <Button 
                     size="lg" 
                     className="bg-green-600 hover:bg-green-700"

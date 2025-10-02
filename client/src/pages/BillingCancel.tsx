@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { XCircle, ArrowLeft, ArrowRight } from "lucide-react";
@@ -39,7 +39,7 @@ export default function BillingCancel() {
                 You can try again whenever you're ready, or continue using Simpli-Docs with the free plan.
               </p>
               <div className="pt-6 flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/">
+                <Link to="/">
                   <Button 
                     variant="outline"
                     size="lg"
@@ -49,7 +49,7 @@ export default function BillingCancel() {
                     Back to Home
                   </Button>
                 </Link>
-                <Link href="/upload">
+                <Link to="/upload">
                   <Button 
                     size="lg"
                     data-testid="button-continue-free"
