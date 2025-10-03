@@ -402,4 +402,47 @@ router.get('/usage', async (req, res) => {
   }
 });
 
+// TEST ENDPOINT: Update user plan for testing (development only)
+// This endpoint allows test automation to set user plans without going through Stripe
+if (process.env.NODE_ENV === 'development') {
+  router.post('/test-update-user-plan', async (req, res) => {
+    try {
+      const { userId, currentPlan } = req.body;
+      
+      if (!userId || !currentPlan) {
+        return res.status(400).json({ error: 'userId and currentPlan are required' });
+      }
+      
+      // Validate plan
+      const validPlans = ['free', 'standard', 'pro', 'family'];
+      if (!validPlans.includes(currentPlan)) {
+        return res.status(400).json({ error: 'Invalid plan. Must be one of: free, standard, pro, family' });
+      }
+      
+      // Upsert user with plan (creates if doesn't exist, updates if exists)
+      const user = await storage.upsertUser({
+        id: userId,
+        email: `test-${userId}@example.com`,
+        currentPlan: currentPlan as 'free' | 'standard' | 'pro' | 'family',
+        subscriptionStatus: 'active'
+      });
+      
+      console.log(`[TEST] Set user ${userId} plan to ${currentPlan}`);
+      
+      res.json({ 
+        success: true, 
+        userId, 
+        currentPlan,
+        subscriptionStatus: user.subscriptionStatus,
+        message: 'User plan updated successfully' 
+      });
+    } catch (e: any) {
+      console.error('[TEST] Update user plan error:', e);
+      res.status(500).json({ error: e.message || 'Failed to update user plan' });
+    }
+  });
+  
+  console.log('[TEST] Test endpoint /api/test-update-user-plan enabled in development mode');
+}
+
 export default router;
