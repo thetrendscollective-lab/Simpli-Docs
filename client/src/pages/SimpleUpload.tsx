@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, FileText, Loader2 } from "lucide-react";
+import { Upload, FileText, Loader2, User } from "lucide-react";
 import DisclaimerBanner from "@/components/DisclaimerBanner";
 import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
 import { handleUpgrade } from "@/lib/handleUpgrade";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SimpleUpload() {
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const [result, setResult] = useState<{
     summary: string;
     keyPoints: string[];
@@ -109,6 +111,49 @@ export default function SimpleUpload() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <DisclaimerBanner />
+      
+      {/* Top Nav Bar */}
+      <div className="border-b border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 backdrop-blur">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-12">
+            <Link to="/" className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100" data-testid="link-home">
+              ← Back to Home
+            </Link>
+            <div className="flex items-center gap-3">
+              {authLoading ? (
+                <div className="h-8 w-16 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div>
+              ) : isAuthenticated ? (
+                <>
+                  <Link to="/account">
+                    <Button variant="ghost" size="sm" className="gap-1" data-testid="button-account-nav">
+                      <User className="h-4 w-4" />
+                      Account
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.location.href = '/api/logout'}
+                    data-testid="button-logout-nav"
+                  >
+                    Log Out
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.location.href = '/api/login'}
+                  data-testid="button-login-nav"
+                >
+                  Log In
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">

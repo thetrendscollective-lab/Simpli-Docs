@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   FileText, 
   Zap, 
@@ -34,6 +35,7 @@ import { handleUpgrade } from "@/lib/handleUpgrade";
 export default function LandingPage() {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
 
   const handleSubscribe = async (tier: string | null) => {
     if (!tier) {
@@ -225,11 +227,44 @@ export default function LandingPage() {
               <sup className="text-[8px] ml-0.5 text-muted-foreground">™</sup>
             </div>
             <div className="flex items-center space-x-4">
-              <Link to="/upload">
-                <Button variant="outline" data-testid="button-try-now">
-                  Try Now
-                </Button>
-              </Link>
+              {authLoading ? (
+                <div className="h-9 w-20 bg-muted animate-pulse rounded"></div>
+              ) : isAuthenticated ? (
+                <>
+                  <Link to="/account">
+                    <Button variant="ghost" data-testid="button-account">
+                      Account
+                    </Button>
+                  </Link>
+                  <Link to="/upload">
+                    <Button variant="outline" data-testid="button-dashboard">
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    onClick={() => window.location.href = '/api/logout'}
+                    data-testid="button-logout-header"
+                  >
+                    Log Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => window.location.href = '/api/login'}
+                    data-testid="button-login"
+                  >
+                    Log In
+                  </Button>
+                  <Link to="/upload">
+                    <Button variant="outline" data-testid="button-try-now">
+                      Try Now
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
