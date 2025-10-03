@@ -13,8 +13,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Get price IDs endpoint
 router.get('/prices', async (req, res) => {
-  // Use testing prices if TESTING_STRIPE_SECRET_KEY is set (testing mode)
-  const isTestMode = !!process.env.TESTING_STRIPE_SECRET_KEY;
+  // Detect test mode by checking if the current Stripe key is a test key
+  const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_');
   
   res.json({
     standard: isTestMode ? process.env.TESTING_PRICE_STANDARD : process.env.PRICE_STANDARD,
@@ -27,6 +27,10 @@ router.post('/create-checkout-session', isAuthenticated, async (req: any, res) =
   try {
     const { priceId } = req.body;
     if (!priceId) return res.status(400).json({ error: 'Missing priceId' });
+    
+    // Debug logging
+    const keyPrefix = process.env.STRIPE_SECRET_KEY?.substring(0, 7);
+    console.log(`Creating checkout with key type: ${keyPrefix}, priceId: ${priceId}`);
 
     const userId = req.user.claims.sub;
     const userEmail = req.user.claims.email;
