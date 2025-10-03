@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { useEffect } from "react";
 import LandingPage from "./pages/LandingPage";
 import Home from "./pages/home";
 import SimpleUpload from "./pages/SimpleUpload";
@@ -12,6 +13,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { handleUpgrade } from "./lib/handleUpgrade";
 import "./index.css";
 
 const router = createBrowserRouter([
@@ -26,6 +28,15 @@ const router = createBrowserRouter([
 ]);
 
 function Root() {
+  useEffect(() => {
+    const pendingUpgrade = sessionStorage.getItem('pendingUpgrade');
+    if (pendingUpgrade) {
+      sessionStorage.removeItem('pendingUpgrade');
+      console.log('Resuming pending upgrade:', pendingUpgrade);
+      handleUpgrade(pendingUpgrade as 'standard' | 'pro' | 'family');
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
