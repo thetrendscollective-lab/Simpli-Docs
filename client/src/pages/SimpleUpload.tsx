@@ -21,6 +21,7 @@ export default function SimpleUpload() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [level, setLevel] = useState<'simple' | 'standard' | 'detailed'>('simple');
+  const [language, setLanguage] = useState('en');
   const [usage, setUsage] = useState<{ remaining: number; limit: number; used: number } | null>(null);
   const [limitReached, setLimitReached] = useState(false);
 
@@ -50,6 +51,7 @@ export default function SimpleUpload() {
       const form = new FormData();
       form.append("file", file);
       form.append("level", level);
+      form.append("language", language);
       const resp = await fetch("/api/process", {
         method: "POST",
         body: form
@@ -224,6 +226,44 @@ export default function SimpleUpload() {
                 <option value="simple">Simple (5th grade) - Plain language, short sentences</option>
                 <option value="standard">Standard (8th-10th grade) - Clear, general language</option>
                 <option value="detailed">Professional - Full context, technical terms allowed</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label htmlFor="language" className="block text-sm font-medium mb-2">
+                Output Language
+              </label>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                Choose the language for your document explanation
+              </p>
+              <select
+                id="language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600"
+                data-testid="select-language"
+              >
+                <option value="en">English</option>
+                <option value="es">Español - Spanish</option>
+                <option value="fr">Français - French</option>
+                <option value="de">Deutsch - German</option>
+                <option value="it">Italiano - Italian</option>
+                <option value="pt">Português - Portuguese</option>
+                <option value="ru">Русский - Russian</option>
+                <option value="zh-CN">简体中文 - Chinese (Simplified)</option>
+                <option value="zh-TW">繁體中文 - Chinese (Traditional)</option>
+                <option value="ja">日本語 - Japanese</option>
+                <option value="ko">한국어 - Korean</option>
+                <option value="ar">العربية - Arabic</option>
+                <option value="hi">हिन्दी - Hindi</option>
+                <option value="pa">ਪੰਜਾਬੀ - Punjabi</option>
+                <option value="ur">اردو - Urdu</option>
+                <option value="bn">বাংলা - Bengali</option>
+                <option value="tr">Türkçe - Turkish</option>
+                <option value="vi">Tiếng Việt - Vietnamese</option>
+                <option value="th">ไทย - Thai</option>
+                <option value="fil">Filipino - Tagalog / Filipino</option>
+                <option value="sw">Kiswahili - Swahili</option>
               </select>
             </div>
           </CardContent>
