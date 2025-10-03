@@ -1,13 +1,16 @@
 import { stripePromise } from './stripe';
-import { PRICE_ID } from '@/constants/prices';
+import { getPriceIds } from '@/constants/prices';
 
-export async function handleUpgrade(plan: keyof typeof PRICE_ID = 'standard') {
+export async function handleUpgrade(plan: 'standard' | 'pro' | 'family' = 'standard') {
   console.log('upgrade clicked', plan);
   try {
+    // Fetch price IDs from API
+    const priceIds = await getPriceIds();
+    
     const res = await fetch('/api/stripe/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceId: PRICE_ID[plan] }),
+      body: JSON.stringify({ priceId: priceIds[plan] }),
     });
 
     // Handle unauthorized - user needs to log in

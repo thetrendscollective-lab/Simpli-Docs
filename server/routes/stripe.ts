@@ -11,6 +11,15 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Get price IDs endpoint
+router.get('/prices', async (req, res) => {
+  res.json({
+    standard: process.env.PRICE_STANDARD,
+    pro: process.env.PRICE_PRO,
+    family: process.env.PRICE_FAMILY,
+  });
+});
+
 router.post('/create-checkout-session', isAuthenticated, async (req: any, res) => {
   try {
     const { priceId } = req.body;
