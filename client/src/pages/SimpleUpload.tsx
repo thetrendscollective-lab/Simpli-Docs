@@ -7,6 +7,8 @@ import DisclaimerBanner from "@/components/DisclaimerBanner";
 import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
 import { handleUpgrade } from "@/lib/handleUpgrade";
 import { useAuth } from "@/hooks/useAuth";
+import { EOBAnalyzer } from "@/components/EOBAnalyzer";
+import type { EOBData } from "@shared/schema";
 
 export default function SimpleUpload() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
@@ -21,6 +23,8 @@ export default function SimpleUpload() {
     detectedLanguageName?: string;
     confidence?: number;
     outputLanguage?: string;
+    documentType?: string;
+    eobData?: EOBData;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -402,6 +406,15 @@ export default function SimpleUpload() {
                 )}
               </div>
             )}
+            
+            {/* EOB Analyzer for Pro users with EOB documents */}
+            {result.eobData && (
+              <div data-testid="eob-analyzer-container">
+                <EOBAnalyzer eobData={result.eobData} />
+              </div>
+            )}
+            
+            {/* Standard document results */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
