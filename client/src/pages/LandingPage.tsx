@@ -243,7 +243,12 @@ export default function LandingPage() {
                   </Link>
                   <Button
                     variant="ghost"
-                    onClick={() => window.location.href = '/api/logout'}
+                    onClick={async () => {
+                      const { getSupabase } = await import('@/lib/supabase');
+                      const supabase = await getSupabase();
+                      await supabase.auth.signOut();
+                      window.location.href = '/';
+                    }}
                     data-testid="button-logout-header"
                   >
                     Log Out
@@ -251,13 +256,14 @@ export default function LandingPage() {
                 </>
               ) : (
                 <>
-                  <Button
-                    variant="ghost"
-                    onClick={() => window.location.href = '/api/login'}
-                    data-testid="button-login"
-                  >
-                    Log In
-                  </Button>
+                  <Link to="/auth">
+                    <Button
+                      variant="ghost"
+                      data-testid="button-login"
+                    >
+                      Log In
+                    </Button>
+                  </Link>
                   <Link to="/upload">
                     <Button variant="outline" data-testid="button-try-now">
                       Try Now

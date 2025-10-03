@@ -114,13 +114,22 @@ router.post('/process', upload.single('file'), async (req, res) => {
     }
 
     // Determine output language based on user input, detection, and subscription
-    const isAuthenticated = !!(req as any).user;
+    const authUser = (req as any).user as any;
+    const isAuthenticated = !!authUser;
     let currentPlan = 'free';
+    let userId: string | null = null;
     
-    if (isAuthenticated) {
-      const userId = (req as any).user.claims.sub;
-      const user = await storage.getUser(userId);
-      currentPlan = user?.currentPlan || 'free';
+    if (isAuthenticated && authUser.id) {
+      // Supabase auth
+      userId = authUser.id;
+      currentPlan = authUser.currentPlan || 'free';
+    } else if (isAuthenticated && authUser.claims?.sub) {
+      // Replit auth (legacy fallback)
+      userId = authUser.claims.sub;
+      if (userId) {
+        const user = await storage.getUser(userId);
+        currentPlan = user?.currentPlan || 'free';
+      }
     }
 
     // Language selection priority:
@@ -331,9 +340,8 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     // Store EOB documents for later retrieval (CSV export, appeal generation)
     // SECURITY: Only store if user is authenticated and has Pro/Family plan
     let documentId: string | undefined;
-    if (eobData && documentType === 'eob' && isAuthenticated && (currentPlan === 'pro' || currentPlan === 'family')) {
+    if (eobData && documentType === 'eob' && isAuthenticated && userId && (currentPlan === 'pro' || currentPlan === 'family')) {
       try {
-        const userId = (req as any).user.claims.sub;
         // Use userId as sessionId for secure document ownership tracking
         const storedDoc = await storage.createDocument({
           sessionId: userId, // Store with userId to verify ownership later
