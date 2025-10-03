@@ -61,7 +61,10 @@ router.post('/process', upload.single('file'), async (req, res) => {
         ? rawLevel as 'simple' | 'standard' | 'detailed'
         : 'standard';
 
-    console.log(`Processing file: ${fileName}, type: ${mime}, size: ${req.file.size} bytes, level: ${level}`);
+    // Get language parameter (default to English)
+    const language = req.body.language || 'en';
+
+    console.log(`Processing file: ${fileName}, type: ${mime}, size: ${req.file.size} bytes, level: ${level}, language: ${language}`);
 
     let text = '';
 
@@ -149,6 +152,32 @@ router.post('/process', upload.single('file'), async (req, res) => {
         ? `Write for a professional adult with domain expertise. Use longer, compound sentences (average 18-25 words). Include technical terminology with precise clarifications. Provide comprehensive context, relevant nuances, and important caveats. Be thorough and detailed rather than brief.`
         : `Write for a general reader (8th–10th grade). Use moderate sentences (12-16 words average). Use clear, plain language and avoid unnecessary jargon. Be concise but informative.`;
 
+    // Get language name for the prompt
+    const languageNames: { [key: string]: string } = {
+      'en': 'English',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'it': 'Italian',
+      'pt': 'Portuguese',
+      'ru': 'Russian',
+      'zh-CN': 'Simplified Chinese',
+      'zh-TW': 'Traditional Chinese',
+      'ja': 'Japanese',
+      'ko': 'Korean',
+      'ar': 'Arabic',
+      'hi': 'Hindi',
+      'pa': 'Punjabi',
+      'ur': 'Urdu',
+      'bn': 'Bengali',
+      'tr': 'Turkish',
+      'vi': 'Vietnamese',
+      'th': 'Thai',
+      'fil': 'Filipino',
+      'sw': 'Swahili'
+    };
+    const languageName = languageNames[language] || 'English';
+
     const systemPrompt = `You extract structured outputs from documents.
 Return strict JSON with this shape:
 {
@@ -158,6 +187,11 @@ Return strict JSON with this shape:
   "actionItems": ["actionable next steps"],
   "readingLevelUsed": "${level}"
 }
+
+CRITICAL OUTPUT LANGUAGE REQUIREMENT:
+- ALL output (summary, keyPoints, glossary definitions, actionItems) MUST be in ${languageName}.
+- Technical terms in glossary can remain in their original language, but definitions must be in ${languageName}.
+- Maintain natural, idiomatic phrasing appropriate for native speakers of ${languageName}.
 
 CRITICAL READING LEVEL REQUIREMENTS:
 ${guidance}
