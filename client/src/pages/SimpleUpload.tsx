@@ -25,6 +25,17 @@ export default function SimpleUpload() {
   const [usage, setUsage] = useState<{ remaining: number; limit: number; used: number } | null>(null);
   const [limitReached, setLimitReached] = useState(false);
 
+  // Check if user has access to multilingual features (Standard plan and up)
+  const currentPlan = user?.currentPlan || 'free';
+  const hasMultilingualAccess = currentPlan !== 'free';
+
+  // Force reset language to English for free users
+  useEffect(() => {
+    if (!hasMultilingualAccess && language !== 'en') {
+      setLanguage('en');
+    }
+  }, [hasMultilingualAccess, language]);
+
   // Fetch usage on component mount
   useEffect(() => {
     async function fetchUsage() {
@@ -232,6 +243,11 @@ export default function SimpleUpload() {
             <div className="mb-4">
               <label htmlFor="language" className="block text-sm font-medium mb-2">
                 Output Language
+                {!hasMultilingualAccess && (
+                  <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-normal">
+                    (Standard plan and up)
+                  </span>
+                )}
               </label>
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                 Choose the language for your document explanation
@@ -240,31 +256,48 @@ export default function SimpleUpload() {
                 id="language"
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600"
+                className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="select-language"
+                disabled={!hasMultilingualAccess}
               >
                 <option value="en">English</option>
-                <option value="es">Español - Spanish</option>
-                <option value="fr">Français - French</option>
-                <option value="de">Deutsch - German</option>
-                <option value="it">Italiano - Italian</option>
-                <option value="pt">Português - Portuguese</option>
-                <option value="ru">Русский - Russian</option>
-                <option value="zh-CN">简体中文 - Chinese (Simplified)</option>
-                <option value="zh-TW">繁體中文 - Chinese (Traditional)</option>
-                <option value="ja">日本語 - Japanese</option>
-                <option value="ko">한국어 - Korean</option>
-                <option value="ar">العربية - Arabic</option>
-                <option value="hi">हिन्दी - Hindi</option>
-                <option value="pa">ਪੰਜਾਬੀ - Punjabi</option>
-                <option value="ur">اردو - Urdu</option>
-                <option value="bn">বাংলা - Bengali</option>
-                <option value="tr">Türkçe - Turkish</option>
-                <option value="vi">Tiếng Việt - Vietnamese</option>
-                <option value="th">ไทย - Thai</option>
-                <option value="fil">Filipino - Tagalog / Filipino</option>
-                <option value="sw">Kiswahili - Swahili</option>
+                {hasMultilingualAccess && (
+                  <>
+                    <option value="es">Español - Spanish</option>
+                    <option value="fr">Français - French</option>
+                    <option value="de">Deutsch - German</option>
+                    <option value="it">Italiano - Italian</option>
+                    <option value="pt">Português - Portuguese</option>
+                    <option value="ru">Русский - Russian</option>
+                    <option value="zh-CN">简体中文 - Chinese (Simplified)</option>
+                    <option value="zh-TW">繁體中文 - Chinese (Traditional)</option>
+                    <option value="ja">日本語 - Japanese</option>
+                    <option value="ko">한국어 - Korean</option>
+                    <option value="ar">العربية - Arabic</option>
+                    <option value="hi">हिन्दी - Hindi</option>
+                    <option value="pa">ਪੰਜਾਬੀ - Punjabi</option>
+                    <option value="ur">اردو - Urdu</option>
+                    <option value="bn">বাংলা - Bengali</option>
+                    <option value="tr">Türkçe - Turkish</option>
+                    <option value="vi">Tiếng Việt - Vietnamese</option>
+                    <option value="th">ไทย - Thai</option>
+                    <option value="fil">Filipino - Tagalog / Filipino</option>
+                    <option value="sw">Kiswahili - Swahili</option>
+                  </>
+                )}
               </select>
+              {!hasMultilingualAccess && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  Unlock 21 languages with Standard plan or higher. 
+                  <button 
+                    onClick={() => handleUpgrade('standard')} 
+                    className="underline ml-1 hover:text-amber-700 dark:hover:text-amber-300"
+                    data-testid="link-upgrade-language"
+                  >
+                    Upgrade now
+                  </button>
+                </p>
+              )}
             </div>
           </CardContent>
           <CardContent>

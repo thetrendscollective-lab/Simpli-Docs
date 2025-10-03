@@ -300,7 +300,8 @@ app.use((req, res, next) => {
   app.post("/api/documents/:id/regenerate", async (req, res) => {
     try {
       const { id } = req.params;
-      const { readingLevel = 'standard', language = 'en' } = req.body;
+      const { readingLevel = 'standard' } = req.body;
+      let { language = 'en' } = req.body;
       const sessionId = req.headers['x-session-id'] as string;
       
       if (!sessionId) {
@@ -320,6 +321,23 @@ app.use((req, res, next) => {
         return res.status(400).json({ error: "No text available for processing" });
       }
 
+      // Enforce language restriction: only paid users can use non-English languages
+      const isAuthenticated = !!(req as any).user;
+      let currentPlan = 'free';
+      
+      if (isAuthenticated) {
+        const userId = (req as any).user.claims.sub;
+        const user = await storage.getUser(userId);
+        currentPlan = user?.currentPlan || 'free';
+      }
+      
+      // Only Standard, Pro, and Family plans can use non-English languages
+      // Unauthenticated users and free users are restricted to English
+      if (currentPlan === 'free' && language !== 'en') {
+        console.log(`User with plan '${currentPlan}' attempted to regenerate with language ${language}, forcing to English`);
+        language = 'en';
+      }
+
       // Validate reading level
       const level: 'simple' | 'standard' | 'detailed' = 
         ['simple', 'standard', 'detailed'].includes(readingLevel) 
@@ -334,6 +352,32 @@ app.use((req, res, next) => {
           ? `Write for a professional adult with domain expertise. Use longer, compound sentences (average 18-25 words). Include technical terminology with precise clarifications. Provide comprehensive context, relevant nuances, and important caveats. Be thorough and detailed rather than brief.`
           : `Write for a general reader (8th–10th grade). Use moderate sentences (12-16 words average). Use clear, plain language and avoid unnecessary jargon. Be concise but informative.`;
 
+      // Get language name for the prompt
+      const languageNames: { [key: string]: string } = {
+        'en': 'English',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'it': 'Italian',
+        'pt': 'Portuguese',
+        'ru': 'Russian',
+        'zh-CN': 'Simplified Chinese',
+        'zh-TW': 'Traditional Chinese',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'ar': 'Arabic',
+        'hi': 'Hindi',
+        'pa': 'Punjabi',
+        'ur': 'Urdu',
+        'bn': 'Bengali',
+        'tr': 'Turkish',
+        'vi': 'Vietnamese',
+        'th': 'Thai',
+        'fil': 'Filipino',
+        'sw': 'Swahili'
+      };
+      const languageName = languageNames[language] || 'English';
+
       const systemPrompt = `You extract structured outputs from documents.
 Return strict JSON with this shape:
 {
@@ -343,6 +387,11 @@ Return strict JSON with this shape:
   "actionItems": ["actionable next steps"],
   "readingLevelUsed": "${level}"
 }
+
+CRITICAL OUTPUT LANGUAGE REQUIREMENT:
+- ALL output (summary, keyPoints, glossary definitions, actionItems) MUST be in ${languageName}.
+- Technical terms in glossary can remain in their original language, but definitions must be in ${languageName}.
+- Maintain natural, idiomatic phrasing appropriate for native speakers of ${languageName}.
 
 CRITICAL READING LEVEL REQUIREMENTS:
 ${guidance}
