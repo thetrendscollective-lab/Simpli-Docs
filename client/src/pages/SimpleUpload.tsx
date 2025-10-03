@@ -17,11 +17,16 @@ export default function SimpleUpload() {
     actionItems: string[];
     readingLevelUsed?: string;
     usage?: { remaining: number; limit: number };
+    detectedLanguage?: string;
+    detectedLanguageName?: string;
+    confidence?: number;
+    outputLanguage?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [level, setLevel] = useState<'simple' | 'standard' | 'detailed'>('simple');
   const [language, setLanguage] = useState('en');
+  const [manuallySelected, setManuallySelected] = useState(false); // Track if user manually selected language
   const [usage, setUsage] = useState<{ remaining: number; limit: number; used: number } | null>(null);
   const [limitReached, setLimitReached] = useState(false);
 
@@ -95,8 +100,17 @@ export default function SimpleUpload() {
         glossary: data.glossary || [],
         actionItems: data.actionItems || [],
         readingLevelUsed: data.readingLevelUsed,
-        usage: data.usage
+        usage: data.usage,
+        detectedLanguage: data.detectedLanguage,
+        detectedLanguageName: data.detectedLanguageName,
+        confidence: data.confidence,
+        outputLanguage: data.outputLanguage
       });
+      
+      // Auto-select detected language for paid users (if not manually selected)
+      if (data.detectedLanguage && hasMultilingualAccess && !manuallySelected) {
+        setLanguage(data.detectedLanguage);
+      }
       
       // Update usage info
       if (data.usage) {
@@ -255,7 +269,10 @@ export default function SimpleUpload() {
               <select
                 id="language"
                 value={language}
-                onChange={(e) => setLanguage(e.target.value)}
+                onChange={(e) => {
+                  setLanguage(e.target.value);
+                  setManuallySelected(true); // Mark as manually selected
+                }}
                 className="w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="select-language"
                 disabled={!hasMultilingualAccess}
@@ -358,6 +375,31 @@ export default function SimpleUpload() {
             {result.readingLevelUsed && (
               <div className="text-sm text-slate-500 dark:text-slate-400 text-center" data-testid="text-reading-level">
                 Reading level: <span className="font-semibold capitalize">{result.readingLevelUsed}</span>
+              </div>
+            )}
+            {result.detectedLanguage && (
+              <div className="text-sm text-center space-y-1" data-testid="detected-language-info">
+                <div className="text-slate-500 dark:text-slate-400">
+                  Detected document language: <span className="font-semibold">{result.detectedLanguageName}</span>
+                  {result.confidence && <span className="text-xs ml-1">({result.confidence}% confidence)</span>}
+                </div>
+                {!hasMultilingualAccess && result.detectedLanguage !== 'en' && (
+                  <div className="text-amber-600 dark:text-amber-400 text-xs" data-testid="language-forced-message">
+                    📌 Output was provided in English (free plan). 
+                    <button 
+                      onClick={() => handleUpgrade('standard')} 
+                      className="underline ml-1 hover:text-amber-700 dark:hover:text-amber-300"
+                      data-testid="link-upgrade-multilingual"
+                    >
+                      Upgrade to get explanations in {result.detectedLanguageName}
+                    </button>
+                  </div>
+                )}
+                {hasMultilingualAccess && result.outputLanguage && result.outputLanguage !== 'en' && (
+                  <div className="text-green-600 dark:text-green-400 text-xs" data-testid="multilingual-active-message">
+                    ✓ Explanation provided in {result.detectedLanguageName}
+                  </div>
+                )}
               </div>
             )}
             <Card>
