@@ -161,20 +161,20 @@ app.use((req, res, next) => {
     }
   });
 
-  // Mount the route handlers as specified
-  app.post("/api/upload/init", uploadInit);
-  app.post("/api/upload/complete", uploadComplete);
-  app.get("/api/docs/:id", getDoc);
-  app.get("/api/docs/:id/text", getDocText);
-  app.post("/api/explain", postExplain);
-  app.get("/api/explanations/:document_id", getExplanation);
-  app.get("/api/docs/latest-id", getLatestDocId);
+  // Mount the route handlers as specified - all with optional auth for Supabase support
+  app.post("/api/upload/init", optionalAuth, uploadInit);
+  app.post("/api/upload/complete", optionalAuth, uploadComplete);
+  app.get("/api/docs/:id", optionalAuth, getDoc);
+  app.get("/api/docs/:id/text", optionalAuth, getDocText);
+  app.post("/api/explain", optionalAuth, postExplain);
+  app.get("/api/explanations/:document_id", optionalAuth, getExplanation);
+  app.get("/api/docs/latest-id", optionalAuth, getLatestDocId);
 
   // Compatibility route for frontend - maps old endpoint to new handler
-  app.post("/api/documents/upload", uploadComplete);
+  app.post("/api/documents/upload", optionalAuth, uploadComplete);
 
-  // Simplified docs upload route
-  app.use("/api/docs", docsRouter);
+  // Simplified docs upload route - with optional auth
+  app.use("/api/docs", optionalAuth, docsRouter);
 
   // Main processing route (consolidated) - with optional auth
   app.use("/api", optionalAuth, apiRouter);
@@ -186,7 +186,7 @@ app.use((req, res, next) => {
   app.use("/api/stripe", stripeRouter);
 
   // Session management
-  app.post("/api/session", async (req, res) => {
+  app.post("/api/session", optionalAuth, async (req, res) => {
     try {
       const sessionId = randomUUID();
       res.json({ sessionId });
@@ -196,71 +196,11 @@ app.use((req, res, next) => {
     }
   });
 
-  // Stripe subscription checkout
-  app.post("/api/create-checkout-session", async (req, res) => {
-    try {
-      const { tier } = req.body;
-      
-      console.log('Checkout session request:', { tier });
-      console.log('Environment variables:', {
-        PRICE_STANDARD: process.env.PRICE_STANDARD ? 'set' : 'NOT SET',
-        PRICE_PRO: process.env.PRICE_PRO ? 'set' : 'NOT SET',
-        PRICE_FAMILY: process.env.PRICE_FAMILY ? 'set' : 'NOT SET'
-      });
-      
-      if (!tier) {
-        return res.status(400).json({ error: "Tier is required" });
-      }
+  // Note: Stripe subscription checkout is handled by /api/stripe/create-checkout-session
+  // in the stripeRouter (see server/routes/stripe.ts) with proper authentication
 
-      // Map tier to environment variable price ID
-      let priceId: string | undefined;
-      switch (tier.toLowerCase()) {
-        case 'standard':
-          priceId = process.env.PRICE_STANDARD;
-          break;
-        case 'pro':
-          priceId = process.env.PRICE_PRO;
-          break;
-        case 'family':
-          priceId = process.env.PRICE_FAMILY;
-          break;
-        default:
-          return res.status(400).json({ error: "Invalid tier. Must be standard, pro, or family" });
-      }
-
-      console.log('Selected price ID for tier', tier, ':', priceId ? 'found' : 'NOT FOUND');
-
-      if (!priceId) {
-        return res.status(500).json({ error: `Price ID not configured for ${tier} tier. Please set PRICE_${tier.toUpperCase()} environment variable.` });
-      }
-
-      const origin = req.headers.origin || `http://localhost:5000`;
-      
-      const stripe = getStripe();
-      const session = await stripe.checkout.sessions.create({
-        mode: 'subscription',
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/`,
-      });
-
-      res.json({ url: session.url });
-    } catch (error: any) {
-      console.error("Error creating checkout session:", error);
-      res.status(500).json({ 
-        error: "Error creating checkout session: " + getErrorMessage(error) 
-      });
-    }
-  });
-
-  // Document processing routes
-  app.post("/api/documents/:id/summarize", async (req, res) => {
+  // Document processing routes - Optional auth (free tier allowed)
+  app.post("/api/documents/:id/summarize", optionalAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { language = 'en' } = req.body;
@@ -310,7 +250,7 @@ app.use((req, res, next) => {
     }
   });
 
-  app.post("/api/documents/:id/regenerate", async (req, res) => {
+  app.post("/api/documents/:id/regenerate", optionalAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { readingLevel = 'standard' } = req.body;
@@ -477,7 +417,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.post("/api/documents/:id/glossary", async (req, res) => {
+  app.post("/api/documents/:id/glossary", optionalAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { language = 'en' } = req.body;
@@ -525,7 +465,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.post("/api/documents/:id/ask", async (req, res) => {
+  app.post("/api/documents/:id/ask", optionalAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { question, language = 'en' } = req.body;
@@ -585,7 +525,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.get("/api/documents/:id/qa", async (req, res) => {
+  app.get("/api/documents/:id/qa", optionalAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const sessionId = req.headers['x-session-id'] as string;
@@ -611,7 +551,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.delete("/api/documents/:id", async (req, res) => {
+  app.delete("/api/documents/:id", optionalAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const sessionId = req.headers['x-session-id'] as string;
@@ -641,6 +581,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
+  // Session cleanup - no auth required (sessionId-based access control)
   app.delete("/api/sessions/:sessionId", async (req, res) => {
     try {
       const { sessionId } = req.params;
@@ -652,8 +593,8 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  // Payment routes
-  app.post("/api/create-payment-intent", async (req, res) => {
+  // Payment routes - Optional auth (sessionId-based access)
+  app.post("/api/create-payment-intent", optionalAuth, async (req, res) => {
     try {
       const { documentId } = req.body;
       const sessionId = req.headers['x-session-id'] as string;
@@ -706,7 +647,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.post("/api/documents/:documentId/verify-payment", async (req, res) => {
+  app.post("/api/documents/:documentId/verify-payment", optionalAuth, async (req, res) => {
     try {
       const { documentId } = req.params;
       const sessionId = req.headers['x-session-id'] as string;
