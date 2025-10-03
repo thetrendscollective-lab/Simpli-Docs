@@ -13,10 +13,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Get price IDs endpoint
 router.get('/prices', async (req, res) => {
+  // Use testing prices if TESTING_STRIPE_SECRET_KEY is set (testing mode)
+  const isTestMode = !!process.env.TESTING_STRIPE_SECRET_KEY;
+  
   res.json({
-    standard: process.env.PRICE_STANDARD,
-    pro: process.env.PRICE_PRO,
-    family: process.env.PRICE_FAMILY,
+    standard: isTestMode ? process.env.TESTING_PRICE_STANDARD : process.env.PRICE_STANDARD,
+    pro: isTestMode ? process.env.TESTING_PRICE_PRO : process.env.PRICE_PRO,
+    family: isTestMode ? process.env.TESTING_PRICE_FAMILY : process.env.PRICE_FAMILY,
   });
 });
 
