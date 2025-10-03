@@ -77,14 +77,14 @@ export default function LandingPage() {
       ]
     },
     {
-      category: "Medical & Insurance Superpowers",
+      category: "Medical & Insurance Bills",
       icon: <Heart className="h-6 w-6" />,
       color: "bg-red-500", 
       items: [
-        "EOB explainer with visual breakdown charts",
-        "ICD/CPT plain-language definitions inline",
-        "Duplicate billing detection & appeal windows",
-        "Visit prep cards: questions for your doctor"
+        "Insurance Bill Analyzer - see what you owe & why (EOB)",
+        "Plain-language medical code definitions (ICD/CPT)",
+        "Duplicate billing alerts & appeal deadline tracking",
+        "Doctor visit prep: smart questions to ask"
       ]
     },
     {
@@ -183,7 +183,7 @@ export default function LandingPage() {
       description: "For power users and professionals",
       features: [
         "Everything in Standard",
-        "EOB analyzer & charts",
+        "Medical bill analyzer with cost breakdown",
         "Legal deadline clocks",
         "Case binder & timeline",
         "Share-safe links",

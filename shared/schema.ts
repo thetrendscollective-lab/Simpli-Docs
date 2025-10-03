@@ -63,6 +63,8 @@ export const documents = pgTable("documents", {
   paymentAmount: integer("payment_amount"), // Amount in cents
   paymentStatus: text("payment_status").default("pending"), // pending, paid, failed
   stripePaymentIntentId: text("stripe_payment_intent_id"),
+  documentType: text("document_type"), // 'general', 'eob', 'legal', 'medical'
+  eobData: jsonb("eob_data"), // Structured EOB data for medical billing documents
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at").default(sql`now()`),
 });
@@ -151,4 +153,85 @@ export interface DocumentSummary {
   recommendations: string[];
   nextSteps: string[];
   riskFlags: string[];
+}
+
+// EOB (Explanation of Benefits) specific types
+export interface EOBLineItem {
+  id: string;
+  serviceDate: string;
+  provider: string;
+  procedureCode: string; // CPT/HCPCS code
+  procedureDescription: string;
+  diagnosisCode?: string; // ICD code
+  diagnosisDescription?: string;
+  billedAmount: number;
+  allowedAmount: number;
+  planPaid: number;
+  patientResponsibility: number;
+  deductible?: number;
+  copay?: number;
+  coinsurance?: number;
+  notCovered?: number;
+  denialCode?: string;
+  denialReason?: string;
+}
+
+export interface EOBFinancialSummary {
+  totalBilled: number;
+  totalAllowed: number;
+  totalPlanPaid: number;
+  totalPatientResponsibility: number;
+  totalDeductible: number;
+  totalCopay: number;
+  totalCoinsurance: number;
+  totalNotCovered: number;
+  deductibleRemaining?: number;
+  outOfPocketRemaining?: number;
+}
+
+export interface EOBIssue {
+  type: 'duplicate_billing' | 'out_of_network' | 'denial' | 'deductible_met' | 'missing_adjustment' | 'high_cost' | 'appeal_window';
+  severity: 'low' | 'medium' | 'high';
+  title: string;
+  description: string;
+  affectedLineItems?: string[]; // IDs of affected line items
+  potentialSavings?: number;
+  actionRequired?: string;
+  appealDeadline?: string;
+}
+
+export interface EOBData {
+  // Header Information
+  payerName: string;
+  payerAddress?: string;
+  payerPhone?: string;
+  memberName: string;
+  memberId: string;
+  groupNumber?: string;
+  claimNumber: string;
+  claimDate?: string;
+  processedDate?: string;
+  
+  // Provider Information
+  providerName?: string;
+  providerNPI?: string;
+  
+  // Service Details
+  serviceStartDate?: string;
+  serviceEndDate?: string;
+  
+  // Line Items
+  lineItems: EOBLineItem[];
+  
+  // Financial Summary
+  financialSummary: EOBFinancialSummary;
+  
+  // Plain Language Summary
+  plainLanguageSummary: string;
+  
+  // Detected Issues
+  issues: EOBIssue[];
+  
+  // Additional Notes
+  notes?: string[];
 }
