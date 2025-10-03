@@ -2,14 +2,9 @@ import express from 'express';
 import Stripe from 'stripe';
 import { isAuthenticated } from '../replitAuth';
 import { storage } from '../storage';
+import { getStripe } from '../stripe';
 
 const router = express.Router();
-
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Get price IDs endpoint
 router.get('/prices', async (req, res) => {
@@ -17,9 +12,18 @@ router.get('/prices', async (req, res) => {
   const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_');
   
   res.json({
-    standard: isTestMode ? process.env.TESTING_PRICE_STANDARD : process.env.PRICE_STANDARD,
-    pro: isTestMode ? process.env.TESTING_PRICE_PRO : process.env.PRICE_PRO,
-    family: isTestMode ? process.env.TESTING_PRICE_FAMILY : process.env.PRICE_FAMILY,
+    standard: {
+      priceId: isTestMode ? process.env.TESTING_PRICE_STANDARD : process.env.PRICE_STANDARD,
+      displayPrice: '$4.99'
+    },
+    pro: {
+      priceId: isTestMode ? process.env.TESTING_PRICE_PRO : process.env.PRICE_PRO,
+      displayPrice: '$9.99'
+    },
+    family: {
+      priceId: isTestMode ? process.env.TESTING_PRICE_FAMILY : process.env.PRICE_FAMILY,
+      displayPrice: '$14.99'
+    },
   });
 });
 
@@ -46,6 +50,7 @@ router.post('/create-checkout-session', isAuthenticated, async (req: any, res) =
     let customerId = user.stripeCustomerId;
     
     if (!customerId) {
+      const stripe = getStripe();
       const customer = await stripe.customers.create({
         email: userEmail,
         metadata: {
@@ -62,6 +67,7 @@ router.post('/create-checkout-session', isAuthenticated, async (req: any, res) =
       });
     }
 
+    const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
@@ -96,6 +102,7 @@ router.post('/create-portal-session', isAuthenticated, async (req: any, res) => 
 
     const origin = req.headers.origin || `http://localhost:5000`;
 
+    const stripe = getStripe();
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
       return_url: `${origin}/account`,
