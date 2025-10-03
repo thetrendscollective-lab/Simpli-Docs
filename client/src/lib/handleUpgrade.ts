@@ -10,7 +10,20 @@ export async function handleUpgrade(plan: keyof typeof PRICE_ID = 'standard') {
       body: JSON.stringify({ priceId: PRICE_ID[plan] }),
     });
 
+    // Handle unauthorized - user needs to log in
+    if (res.status === 401) {
+      // Store the intended plan in sessionStorage so we can resume after login
+      sessionStorage.setItem('pendingUpgrade', plan);
+      window.location.href = '/api/login';
+      return;
+    }
+
     const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to create checkout session');
+    }
+
     if (data?.url) {
       // Prefer direct redirect if available
       window.location.href = data.url;

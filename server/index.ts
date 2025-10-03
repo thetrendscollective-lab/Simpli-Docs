@@ -15,6 +15,7 @@ import { DocumentProcessor } from "./services/documentProcessor";
 import { insertQASchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { getErrorMessage } from "./utils";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -25,6 +26,84 @@ const openaiService = new OpenAIService();
 const documentProcessor = new DocumentProcessor();
 
 const app = express();
+
+// CRITICAL: Stripe webhook MUST come before express.json to preserve raw body
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET not configured');
+    return res.status(500).send('Webhook secret not configured');
+  }
+
+  let event: Stripe.Event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig as string, webhookSecret);
+  } catch (err: any) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.userId;
+        
+        if (userId && session.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          const priceId = subscription.items.data[0]?.price.id;
+          
+          // Determine plan tier from price ID
+          let planTier = 'free';
+          if (priceId === process.env.PRICE_STANDARD || priceId === 'price_1SDDKUClhBp5wD3K7bEUJPzu') {
+            planTier = 'standard';
+          } else if (priceId === process.env.PRICE_PRO || priceId === 'price_1SDDL0ClhBp5wD3KCrHPkJbi') {
+            planTier = 'pro';
+          } else if (priceId === process.env.PRICE_FAMILY || priceId === 'price_1SDDLsClhBp5wD3KAdRBKaSm') {
+            planTier = 'family';
+          }
+
+          // Update user with subscription details
+          await storage.upsertUser({
+            id: userId,
+            stripeCustomerId: session.customer as string,
+            subscriptionStatus: subscription.status,
+            currentPlan: planTier,
+            currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+          });
+
+          console.log(`Subscription linked to user ${userId}: ${planTier}`);
+        }
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as any;
+        console.log(`Subscription updated for customer ${subscription.customer}`);
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as any;
+        console.log(`Subscription deleted for customer ${subscription.customer}`);
+        break;
+      }
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    res.json({ received: true });
+  } catch (err: any) {
+    console.error('Error processing webhook:', err);
+    res.status(500).send(`Webhook processing error: ${err.message}`);
+  }
+});
+
+// Now apply JSON parser for all other routes
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -59,6 +138,21 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Setup Replit Auth (must be before routes)
+  await setupAuth(app);
+
+  // Auth route
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
   // Mount the route handlers as specified
   app.post("/api/upload/init", uploadInit);
   app.post("/api/upload/complete", uploadComplete);
