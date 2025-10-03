@@ -22,6 +22,7 @@ interface DocumentDashboardProps {
 export default function DocumentDashboard({ documentId, language, sessionId, onDelete }: DocumentDashboardProps) {
   const [activeTab, setActiveTab] = useState<"summary" | "glossary" | "original">("summary");
   const [readingLevel, setReadingLevel] = useState<'simple' | 'standard' | 'detailed'>('simple');
+  const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [regeneratedContent, setRegeneratedContent] = useState<any>(null);
   const { toast } = useToast();
 
@@ -45,14 +46,14 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
   });
 
   const regenerateMutation = useMutation({
-    mutationFn: async (level: 'simple' | 'standard' | 'detailed') => {
+    mutationFn: async ({ level, lang }: { level: 'simple' | 'standard' | 'detailed', lang: string }) => {
       const response = await fetch(`/api/documents/${documentId}/regenerate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-session-id': sessionId
         },
-        body: JSON.stringify({ readingLevel: level, language }),
+        body: JSON.stringify({ readingLevel: level, language: lang }),
         credentials: 'include'
       });
       
@@ -65,8 +66,8 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
     onSuccess: (data) => {
       setRegeneratedContent(data);
       toast({
-        title: "Reading level changed",
-        description: `Document regenerated at ${readingLevel} level.`,
+        title: "Document regenerated",
+        description: `Updated to ${readingLevel} level in selected language.`,
       });
     },
     onError: (error: Error) => {
@@ -81,8 +82,37 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
   const handleReadingLevelChange = (value: string) => {
     const level = value as 'simple' | 'standard' | 'detailed';
     setReadingLevel(level);
-    regenerateMutation.mutate(level);
+    regenerateMutation.mutate({ level, lang: selectedLanguage });
   };
+
+  const handleLanguageChange = (value: string) => {
+    setSelectedLanguage(value);
+    regenerateMutation.mutate({ level: readingLevel, lang: value });
+  };
+
+  const languages = [
+    { code: "en", name: "English", native: "English" },
+    { code: "es", name: "Spanish", native: "Español" },
+    { code: "fr", name: "French", native: "Français" },
+    { code: "de", name: "German", native: "Deutsch" },
+    { code: "it", name: "Italian", native: "Italiano" },
+    { code: "pt", name: "Portuguese", native: "Português" },
+    { code: "ru", name: "Russian", native: "Русский" },
+    { code: "zh-CN", name: "Chinese (Simplified)", native: "简体中文" },
+    { code: "zh-TW", name: "Chinese (Traditional)", native: "繁體中文" },
+    { code: "ja", name: "Japanese", native: "日本語" },
+    { code: "ko", name: "Korean", native: "한국어" },
+    { code: "ar", name: "Arabic", native: "العربية" },
+    { code: "hi", name: "Hindi", native: "हिन्दी" },
+    { code: "pa", name: "Punjabi", native: "ਪੰਜਾਬੀ" },
+    { code: "ur", name: "Urdu", native: "اردو" },
+    { code: "bn", name: "Bengali", native: "বাংলা" },
+    { code: "tr", name: "Turkish", native: "Türkçe" },
+    { code: "vi", name: "Vietnamese", native: "Tiếng Việt" },
+    { code: "th", name: "Thai", native: "ไทย" },
+    { code: "fil", name: "Tagalog / Filipino", native: "Filipino" },
+    { code: "sw", name: "Swahili", native: "Kiswahili" }
+  ];
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
@@ -215,10 +245,10 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
           </div>
         </div>
 
-        {/* Reading Level Selector */}
+        {/* Reading Level & Language Selector */}
         <div className="bg-card border border-border rounded-lg p-4 mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="flex-grow">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <Label htmlFor="reading-level-selector" className="text-sm font-medium mb-2 block">
                 Reading Level Dropdown
               </Label>
@@ -240,13 +270,39 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
                 </SelectContent>
               </Select>
             </div>
-            {regenerateMutation.isPending && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                Regenerating...
-              </div>
-            )}
+            
+            <div>
+              <Label htmlFor="language-selector" className="text-sm font-medium mb-2 block">
+                Output Language
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Choose the language for your document explanation
+              </p>
+              <Select 
+                value={selectedLanguage} 
+                onValueChange={handleLanguageChange}
+                disabled={regenerateMutation.isPending}
+              >
+                <SelectTrigger id="language-selector" className="w-full" data-testid="select-language">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map(lang => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.native} - {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          
+          {regenerateMutation.isPending && (
+            <div className="flex items-center text-sm text-muted-foreground mt-3">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+              Regenerating document...
+            </div>
+          )}
         </div>
 
         {/* Tabbed Content */}
@@ -257,7 +313,7 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
             {activeTab === "summary" && (
               <SummaryTab 
                 documentId={documentId} 
-                language={language} 
+                language={selectedLanguage} 
                 sessionId={sessionId}
                 regeneratedContent={regeneratedContent}
               />
@@ -265,7 +321,7 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
             {activeTab === "glossary" && (
               <GlossaryTab 
                 documentId={documentId} 
-                language={language} 
+                language={selectedLanguage} 
                 sessionId={sessionId}
                 regeneratedContent={regeneratedContent}
               />
@@ -282,7 +338,7 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
 
       {/* Q&A Sidebar */}
       <div className="lg:col-span-1">
-        <QASidebar documentId={documentId} language={language} sessionId={sessionId} />
+        <QASidebar documentId={documentId} language={selectedLanguage} sessionId={sessionId} />
       </div>
     </div>
   );
