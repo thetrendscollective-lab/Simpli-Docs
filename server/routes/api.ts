@@ -323,6 +323,37 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     await storage.incrementUsage(clientIP);
     const updatedUsage = await storage.checkUsageLimit(clientIP, MONTHLY_FREE_LIMIT);
     
+    // Store EOB documents for later retrieval (CSV export, appeal generation)
+    let documentId: string | undefined;
+    if (eobData && documentType === 'eob') {
+      try {
+        const sessionId = (req as any).sessionID || 'anonymous';
+        const storedDoc = await storage.createDocument({
+          sessionId,
+          filename: fileName,
+          fileType: mime,
+          fileSize: req.file.size,
+          originalText: text,
+          summary: result.summary,
+          glossary: result.glossary,
+          language: outputLanguage,
+          detectedLanguage,
+          confidence,
+          documentType,
+          eobData: eobData as any,
+          processedSections: null,
+          pageCount: 1,
+          paymentAmount: null,
+          paymentStatus: 'pending',
+          stripePaymentIntentId: null
+        });
+        documentId = storedDoc.id;
+        console.log(`EOB document stored with ID: ${documentId}`);
+      } catch (error) {
+        console.error('Failed to store EOB document:', error);
+      }
+    }
+    
     console.log('Processing complete, sending response with', result.keyPoints.length, 'key points at', level, 'level');
     console.log(`Usage: ${MONTHLY_FREE_LIMIT - updatedUsage.remaining}/${MONTHLY_FREE_LIMIT}, Remaining: ${updatedUsage.remaining}`);
     
@@ -334,6 +365,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
       outputLanguage,
       documentType,
       eobData,
+      documentId,
       usage: {
         remaining: updatedUsage.remaining,
         limit: MONTHLY_FREE_LIMIT
