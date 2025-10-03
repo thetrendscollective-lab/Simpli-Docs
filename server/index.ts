@@ -58,11 +58,11 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
           
           // Determine plan tier from price ID
           let planTier = 'free';
-          if (priceId === process.env.PRICE_STANDARD || priceId === 'price_1SDDKUClhBp5wD3K7bEUJPzu') {
+          if (priceId === process.env.PRICE_STANDARD) {
             planTier = 'standard';
-          } else if (priceId === process.env.PRICE_PRO || priceId === 'price_1SDDL0ClhBp5wD3KCrHPkJbi') {
+          } else if (priceId === process.env.PRICE_PRO) {
             planTier = 'pro';
-          } else if (priceId === process.env.PRICE_FAMILY || priceId === 'price_1SDDLsClhBp5wD3KAdRBKaSm') {
+          } else if (priceId === process.env.PRICE_FAMILY) {
             planTier = 'family';
           }
 

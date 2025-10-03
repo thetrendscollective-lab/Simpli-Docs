@@ -1,5 +1,23 @@
+// Cache for price IDs fetched from API
+let priceCache: { standard: string; pro: string; family: string } | null = null;
+
+export async function getPriceIds() {
+  if (priceCache) return priceCache;
+  
+  try {
+    const res = await fetch('/api/stripe/prices');
+    const prices = await res.json();
+    priceCache = prices;
+    return prices;
+  } catch (error) {
+    console.error('Failed to fetch price IDs:', error);
+    throw new Error('Unable to load pricing information');
+  }
+}
+
+// Legacy export for backwards compatibility - will be removed
 export const PRICE_ID = {
-  standard: 'price_1SDDKUClhBp5wD3K7bEUJPzu',   // $9.99
-  pro:      'price_1SDDL0ClhBp5wD3KCrHPkJbi',   // $24.99
-  family:   'price_1SDDLsClhBp5wD3KAdRBKaSm',   // $39.99
+  standard: '',
+  pro: '',
+  family: '',
 };
