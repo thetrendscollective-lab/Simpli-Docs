@@ -16,12 +16,8 @@ import { insertQASchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { getErrorMessage } from "./utils";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { getStripe } from "./stripe";
 
-// Initialize Stripe
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
-}
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const openaiService = new OpenAIService();
 const documentProcessor = new DocumentProcessor();
 
@@ -40,6 +36,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
   let event: Stripe.Event;
 
   try {
+    const stripe = getStripe();
     event = stripe.webhooks.constructEvent(req.body, sig as string, webhookSecret);
   } catch (err: any) {
     console.error('Webhook signature verification failed:', err.message);
@@ -53,6 +50,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
         const userId = session.metadata?.userId;
         
         if (userId && session.subscription) {
+          const stripe = getStripe();
           const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
           const priceId = subscription.items.data[0]?.price.id;
           
@@ -225,6 +223,7 @@ app.use((req, res, next) => {
 
       const origin = req.headers.origin || `http://localhost:5000`;
       
+      const stripe = getStripe();
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         payment_method_types: ['card'],
@@ -618,6 +617,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
         return res.status(400).json({ error: "Payment amount not calculated for document" });
       }
 
+      const stripe = getStripe();
       const paymentIntent = await stripe.paymentIntents.create({
         amount: document.paymentAmount,
         currency: "usd",
@@ -666,6 +666,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
         return res.status(400).json({ error: "No payment intent found for document" });
       }
 
+      const stripe = getStripe();
       const paymentIntent = await stripe.paymentIntents.retrieve(document.stripePaymentIntentId);
       
       if (paymentIntent.metadata.documentId !== documentId) {

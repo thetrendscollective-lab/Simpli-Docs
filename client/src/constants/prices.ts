@@ -1,7 +1,19 @@
-// Cache for price IDs fetched from API
-let priceCache: { standard: string; pro: string; family: string } | null = null;
+// Type for structured price data from API
+export interface PriceData {
+  priceId: string;
+  displayPrice: string;
+}
 
-export async function getPriceIds() {
+export interface PriceMap {
+  standard: PriceData;
+  pro: PriceData;
+  family: PriceData;
+}
+
+// Cache for price IDs fetched from API
+let priceCache: PriceMap | null = null;
+
+export async function getPriceIds(): Promise<PriceMap> {
   if (priceCache) return priceCache;
   
   try {

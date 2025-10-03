@@ -10,7 +10,7 @@ export async function handleUpgrade(plan: 'standard' | 'pro' | 'family' = 'stand
     const res = await fetch('/api/stripe/create-checkout-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceId: priceIds[plan] }),
+      body: JSON.stringify({ priceId: priceIds[plan].priceId }),
     });
 
     // Handle unauthorized - user needs to log in
