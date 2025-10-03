@@ -137,12 +137,13 @@ router.post('/process', upload.single('file'), async (req, res) => {
 
     console.log(`Output language: ${outputLanguage}, Detected: ${detectedLanguage} (${confidence}% confidence)`);
 
-    // EOB Detection and Extraction for Pro users
+    // EOB Detection and Extraction for Pro/Family users ONLY
     let eobData = null;
     let documentType = 'general';
     
-    if (currentPlan === 'pro' || currentPlan === 'family') {
-      console.log('Checking if document is an EOB...');
+    // Enforce Pro/Family plan requirement for EOB analysis
+    if (isAuthenticated && (currentPlan === 'pro' || currentPlan === 'family')) {
+      console.log('User has Pro/Family plan, checking if document is an EOB...');
       const eobDetection = eobDetectionService.detectEOB(text);
       
       if (eobDetection.isEOB) {
@@ -159,6 +160,10 @@ router.post('/process', upload.single('file'), async (req, res) => {
       } else {
         console.log(`Document is not an EOB (${eobDetection.confidence}% confidence)`);
       }
+    } else if (!isAuthenticated) {
+      console.log('User not authenticated, skipping EOB detection');
+    } else {
+      console.log(`User plan '${currentPlan}' does not have EOB analyzer access (Pro/Family only)`);
     }
 
     // Check if OpenAI API key is available
@@ -324,12 +329,14 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     const updatedUsage = await storage.checkUsageLimit(clientIP, MONTHLY_FREE_LIMIT);
     
     // Store EOB documents for later retrieval (CSV export, appeal generation)
+    // SECURITY: Only store if user is authenticated and has Pro/Family plan
     let documentId: string | undefined;
-    if (eobData && documentType === 'eob') {
+    if (eobData && documentType === 'eob' && isAuthenticated && (currentPlan === 'pro' || currentPlan === 'family')) {
       try {
-        const sessionId = (req as any).sessionID || 'anonymous';
+        const userId = (req as any).user.claims.sub;
+        // Use userId as sessionId for secure document ownership tracking
         const storedDoc = await storage.createDocument({
-          sessionId,
+          sessionId: userId, // Store with userId to verify ownership later
           filename: fileName,
           fileType: mime,
           fileSize: req.file.size,
@@ -348,7 +355,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
           stripePaymentIntentId: null
         });
         documentId = storedDoc.id;
-        console.log(`EOB document stored with ID: ${documentId}`);
+        console.log(`EOB document stored with ID: ${documentId} for user: ${userId}`);
       } catch (error) {
         console.error('Failed to store EOB document:', error);
       }

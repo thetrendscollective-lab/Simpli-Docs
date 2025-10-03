@@ -6,14 +6,55 @@ import OpenAI from "openai";
 const router = Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 
+// Middleware to verify authentication and Pro/Family plan
+async function requireProPlan(req: any, res: any, next: any) {
+  // Check if user is authenticated
+  if (!req.user || !req.user.claims || !req.user.claims.sub) {
+    return res.status(401).json({ 
+      error: 'Authentication required',
+      message: 'Please log in to access EOB features'
+    });
+  }
+  
+  const userId = req.user.claims.sub;
+  const user = await storage.getUser(userId);
+  const currentPlan = user?.currentPlan || 'free';
+  
+  // Check if user has Pro or Family plan
+  if (currentPlan !== 'pro' && currentPlan !== 'family') {
+    return res.status(403).json({ 
+      error: 'Upgrade required',
+      message: 'EOB Analyzer features require Pro or Family plan',
+      currentPlan
+    });
+  }
+  
+  // Attach user info to request for use in handlers
+  req.userId = userId;
+  req.currentPlan = currentPlan;
+  next();
+}
+
 // Export EOB line items as CSV
-router.get('/:documentId/export-csv', async (req, res) => {
+router.get('/:documentId/export-csv', requireProPlan, async (req, res) => {
   try {
     const { documentId } = req.params;
+    const userId = (req as any).userId;
     
     const document = await storage.getDocument(documentId);
+    
+    // Verify document exists and is an EOB
     if (!document || !document.eobData) {
       return res.status(404).json({ error: 'EOB document not found' });
+    }
+    
+    // SECURITY: Verify document ownership (sessionId should match userId)
+    if (document.sessionId !== userId) {
+      console.log(`Access denied: User ${userId} attempted to access document ${documentId} owned by ${document.sessionId}`);
+      return res.status(403).json({ 
+        error: 'Access denied',
+        message: 'You do not have permission to access this document'
+      });
     }
     
     const eobData = document.eobData as unknown as EOBData;
@@ -82,13 +123,25 @@ router.get('/:documentId/export-csv', async (req, res) => {
 });
 
 // Generate appeal letter for disputed claims
-router.get('/:documentId/generate-appeal', async (req, res) => {
+router.get('/:documentId/generate-appeal', requireProPlan, async (req, res) => {
   try {
     const { documentId } = req.params;
+    const userId = (req as any).userId;
     
     const document = await storage.getDocument(documentId);
+    
+    // Verify document exists and is an EOB
     if (!document || !document.eobData) {
       return res.status(404).json({ error: 'EOB document not found' });
+    }
+    
+    // SECURITY: Verify document ownership (sessionId should match userId)
+    if (document.sessionId !== userId) {
+      console.log(`Access denied: User ${userId} attempted to access document ${documentId} owned by ${document.sessionId}`);
+      return res.status(403).json({ 
+        error: 'Access denied',
+        message: 'You do not have permission to access this document'
+      });
     }
     
     const eobData = document.eobData as unknown as EOBData;
