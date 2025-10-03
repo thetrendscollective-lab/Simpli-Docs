@@ -2,16 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { supabase } from '../services/supa';
 import { storage } from '../storage';
 
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    currentPlan: 'free' | 'standard' | 'pro' | 'family';
-    subscriptionStatus: string | null;
-  };
+export interface AuthUser {
+  id: string;
+  email: string;
+  currentPlan: 'free' | 'standard' | 'pro' | 'family';
+  subscriptionStatus: string | null;
 }
 
-export async function authenticateSupabase(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authenticateSupabase(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
     
@@ -47,12 +45,12 @@ export async function authenticateSupabase(req: AuthRequest, res: Response, next
       console.log(`✅ Created new user in database: ${user.id}`);
     }
 
-    req.user = {
+    (req as any).user = {
       id: dbUser.id,
       email: dbUser.email || user.email || '',
       currentPlan: (dbUser.currentPlan as 'free' | 'standard' | 'pro' | 'family') || 'free',
       subscriptionStatus: dbUser.subscriptionStatus || null,
-    };
+    } as AuthUser;
 
     next();
   } catch (error) {
@@ -61,7 +59,7 @@ export async function authenticateSupabase(req: AuthRequest, res: Response, next
   }
 }
 
-export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {
+export function optionalAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

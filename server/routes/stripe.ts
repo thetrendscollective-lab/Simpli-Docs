@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import Stripe from 'stripe';
-import { isAuthenticated } from '../replitAuth';
+import { authenticateSupabase, AuthUser } from '../middleware/supabaseAuth';
 import { storage } from '../storage';
 import { getStripe } from '../stripe';
 
@@ -27,7 +27,7 @@ router.get('/prices', async (req, res) => {
   });
 });
 
-router.post('/create-checkout-session', isAuthenticated, async (req: any, res) => {
+router.post('/create-checkout-session', authenticateSupabase, async (req: Request, res: Response) => {
   try {
     const { priceId } = req.body;
     if (!priceId) return res.status(400).json({ error: 'Missing priceId' });
@@ -36,18 +36,23 @@ router.post('/create-checkout-session', isAuthenticated, async (req: any, res) =
     const keyPrefix = process.env.STRIPE_SECRET_KEY?.substring(0, 7);
     console.log(`Creating checkout with key type: ${keyPrefix}, priceId: ${priceId}`);
 
-    const userId = req.user.claims.sub;
-    const userEmail = req.user.claims.email;
-    const user = await storage.getUser(userId);
+    const authUser = (req as any).user as AuthUser;
+    if (!authUser) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
 
-    if (!user) {
+    const userId = authUser.id;
+    const userEmail = authUser.email;
+    const dbUser = await storage.getUser(userId);
+
+    if (!dbUser) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     const origin = req.headers.origin || `http://localhost:5000`;
 
     // Create or retrieve Stripe customer
-    let customerId = user.stripeCustomerId;
+    let customerId = dbUser.stripeCustomerId;
     
     if (!customerId) {
       const stripe = getStripe();
@@ -91,12 +96,17 @@ router.post('/create-checkout-session', isAuthenticated, async (req: any, res) =
 });
 
 // Stripe Customer Portal - for managing subscriptions
-router.post('/create-portal-session', isAuthenticated, async (req: any, res) => {
+router.post('/create-portal-session', authenticateSupabase, async (req: Request, res: Response) => {
   try {
-    const userId = req.user.claims.sub;
-    const user = await storage.getUser(userId);
+    const authUser = (req as any).user as AuthUser;
+    if (!authUser) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
 
-    if (!user?.stripeCustomerId) {
+    const userId = authUser.id;
+    const dbUser = await storage.getUser(userId);
+
+    if (!dbUser?.stripeCustomerId) {
       return res.status(404).json({ error: 'No active subscription found' });
     }
 
@@ -104,7 +114,7 @@ router.post('/create-portal-session', isAuthenticated, async (req: any, res) => 
 
     const stripe = getStripe();
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: user.stripeCustomerId,
+      customer: dbUser.stripeCustomerId,
       return_url: `${origin}/account`,
     });
 
