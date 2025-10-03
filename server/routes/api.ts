@@ -62,7 +62,24 @@ router.post('/process', upload.single('file'), async (req, res) => {
         : 'standard';
 
     // Get language parameter (default to English)
-    const language = req.body.language || 'en';
+    let language = req.body.language || 'en';
+
+    // Enforce language restriction: only paid users can use non-English languages
+    const isAuthenticated = !!(req as any).user;
+    let currentPlan = 'free';
+    
+    if (isAuthenticated) {
+      const userId = (req as any).user.claims.sub;
+      const user = await storage.getUser(userId);
+      currentPlan = user?.currentPlan || 'free';
+    }
+    
+    // Only Standard, Pro, and Family plans can use non-English languages
+    // Unauthenticated users and free users are restricted to English
+    if (currentPlan === 'free' && language !== 'en') {
+      console.log(`User with plan '${currentPlan}' attempted to use language ${language}, forcing to English`);
+      language = 'en';
+    }
 
     console.log(`Processing file: ${fileName}, type: ${mime}, size: ${req.file.size} bytes, level: ${level}, language: ${language}`);
 

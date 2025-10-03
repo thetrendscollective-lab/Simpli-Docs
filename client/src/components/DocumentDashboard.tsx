@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { type Document } from "@shared/schema";
@@ -11,6 +11,8 @@ import PaymentFlow from "@/components/PaymentFlow";
 import { queryClient } from "@/lib/queryClient";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
+import { handleUpgrade } from "@/lib/handleUpgrade";
 
 interface DocumentDashboardProps {
   documentId: string;
@@ -25,6 +27,18 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
   const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [regeneratedContent, setRegeneratedContent] = useState<any>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Check if user has access to multilingual features (Standard plan and up)
+  const currentPlan = user?.currentPlan || 'free';
+  const hasMultilingualAccess = currentPlan !== 'free';
+
+  // Force reset language to English for free users
+  useEffect(() => {
+    if (!hasMultilingualAccess && selectedLanguage !== 'en') {
+      setSelectedLanguage('en');
+    }
+  }, [hasMultilingualAccess, selectedLanguage]);
 
   const { data: document, isLoading } = useQuery<Document>({
     queryKey: ["/api/documents", documentId],
@@ -274,6 +288,11 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
             <div>
               <Label htmlFor="language-selector" className="text-sm font-medium mb-2 block">
                 Output Language
+                {!hasMultilingualAccess && (
+                  <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-normal">
+                    (Standard plan and up)
+                  </span>
+                )}
               </Label>
               <p className="text-xs text-muted-foreground mb-2">
                 Choose the language for your document explanation
@@ -281,19 +300,32 @@ export default function DocumentDashboard({ documentId, language, sessionId, onD
               <Select 
                 value={selectedLanguage} 
                 onValueChange={handleLanguageChange}
-                disabled={regenerateMutation.isPending}
+                disabled={regenerateMutation.isPending || !hasMultilingualAccess}
               >
                 <SelectTrigger id="language-selector" className="w-full" data-testid="select-language">
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
                 <SelectContent>
-                  {languages.map(lang => (
+                  <SelectItem value="en">English</SelectItem>
+                  {hasMultilingualAccess && languages.filter(lang => lang.code !== 'en').map(lang => (
                     <SelectItem key={lang.code} value={lang.code}>
                       {lang.native} - {lang.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {!hasMultilingualAccess && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  Unlock 21 languages with Standard plan or higher. 
+                  <button 
+                    onClick={() => handleUpgrade('standard')} 
+                    className="underline ml-1 hover:text-amber-700 dark:hover:text-amber-300"
+                    data-testid="link-upgrade-language"
+                  >
+                    Upgrade now
+                  </button>
+                </p>
+              )}
             </div>
           </div>
           
