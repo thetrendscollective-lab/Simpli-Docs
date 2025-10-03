@@ -57,6 +57,8 @@ export const documents = pgTable("documents", {
   summary: text("summary"),
   glossary: jsonb("glossary"),
   language: text("language").default("en"),
+  detectedLanguage: text("detected_language"),
+  confidence: integer("confidence"), // 0-100 percentage
   pageCount: integer("page_count").default(1),
   paymentAmount: integer("payment_amount"), // Amount in cents
   paymentStatus: text("payment_status").default("pending"), // pending, paid, failed

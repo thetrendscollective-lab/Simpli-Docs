@@ -5,6 +5,7 @@ import Tesseract from "tesseract.js";
 import OpenAI from "openai";
 import { DocumentProcessor } from "../services/documentProcessor";
 import { OCRService } from "../services/ocrService";
+import { LanguageDetectionService } from "../services/languageDetectionService";
 import { storage } from "../storage";
 
 const router = Router();
@@ -16,6 +17,7 @@ const upload = multer({
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const documentProcessor = new DocumentProcessor();
 const ocrService = new OCRService();
+const languageDetectionService = new LanguageDetectionService(process.env.OPENAI_API_KEY || '');
 
 const MONTHLY_FREE_LIMIT = 2; // 2 documents per month for free users
 
@@ -61,27 +63,7 @@ router.post('/process', upload.single('file'), async (req, res) => {
         ? rawLevel as 'simple' | 'standard' | 'detailed'
         : 'standard';
 
-    // Get language parameter (default to English)
-    let language = req.body.language || 'en';
-
-    // Enforce language restriction: only paid users can use non-English languages
-    const isAuthenticated = !!(req as any).user;
-    let currentPlan = 'free';
-    
-    if (isAuthenticated) {
-      const userId = (req as any).user.claims.sub;
-      const user = await storage.getUser(userId);
-      currentPlan = user?.currentPlan || 'free';
-    }
-    
-    // Only Standard, Pro, and Family plans can use non-English languages
-    // Unauthenticated users and free users are restricted to English
-    if (currentPlan === 'free' && language !== 'en') {
-      console.log(`User with plan '${currentPlan}' attempted to use language ${language}, forcing to English`);
-      language = 'en';
-    }
-
-    console.log(`Processing file: ${fileName}, type: ${mime}, size: ${req.file.size} bytes, level: ${level}, language: ${language}`);
+    console.log(`Processing file: ${fileName}, type: ${mime}, size: ${req.file.size} bytes, level: ${level}`);
 
     let text = '';
 
@@ -112,6 +94,44 @@ router.post('/process', upload.single('file'), async (req, res) => {
     }
 
     console.log(`Text extracted successfully. First 100 chars: ${text.slice(0, 100)}`);
+
+    // Detect document language automatically
+    let detectedLanguage = 'en';
+    let confidence = 50;
+    let detectedLanguageName = 'English';
+    
+    if (process.env.OPENAI_API_KEY && text.length > 50) {
+      console.log('Detecting document language...');
+      const detection = await languageDetectionService.detectLanguage(text);
+      detectedLanguage = detection.language;
+      confidence = detection.confidence;
+      detectedLanguageName = detection.languageName;
+      console.log(`Language detected: ${detectedLanguageName} (${confidence}% confidence)`);
+    }
+
+    // Determine output language based on user input, detection, and subscription
+    const isAuthenticated = !!(req as any).user;
+    let currentPlan = 'free';
+    
+    if (isAuthenticated) {
+      const userId = (req as any).user.claims.sub;
+      const user = await storage.getUser(userId);
+      currentPlan = user?.currentPlan || 'free';
+    }
+
+    // Language selection priority:
+    // 1. If user manually selected a language (req.body.language), use it (for paid users)
+    // 2. Otherwise, use detected language (for paid users)
+    // 3. Free users always get English regardless of detection or selection
+    let outputLanguage = req.body.language || detectedLanguage;
+    
+    // Enforce subscription tier restrictions
+    if (currentPlan === 'free' && outputLanguage !== 'en') {
+      console.log(`User with plan '${currentPlan}' attempted to use language ${outputLanguage}, forcing to English`);
+      outputLanguage = 'en';
+    }
+
+    console.log(`Output language: ${outputLanguage}, Detected: ${detectedLanguage} (${confidence}% confidence)`);
 
     // Check if OpenAI API key is available
     if (!process.env.OPENAI_API_KEY) {
@@ -193,7 +213,7 @@ router.post('/process', upload.single('file'), async (req, res) => {
       'fil': 'Filipino',
       'sw': 'Swahili'
     };
-    const languageName = languageNames[language] || 'English';
+    const languageName = languageNames[outputLanguage] || 'English';
 
     const systemPrompt = `You extract structured outputs from documents.
 Return strict JSON with this shape:
@@ -280,6 +300,10 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     
     res.json({
       ...result,
+      detectedLanguage,
+      detectedLanguageName,
+      confidence,
+      outputLanguage,
       usage: {
         remaining: updatedUsage.remaining,
         limit: MONTHLY_FREE_LIMIT
