@@ -21,7 +21,7 @@ interface DocumentDashboardProps {
 
 export default function DocumentDashboard({ documentId, language, sessionId, onDelete }: DocumentDashboardProps) {
   const [activeTab, setActiveTab] = useState<"summary" | "glossary" | "original">("summary");
-  const [readingLevel, setReadingLevel] = useState<'simple' | 'standard' | 'detailed'>('standard');
+  const [readingLevel, setReadingLevel] = useState<'simple' | 'standard' | 'detailed'>('simple');
   const [regeneratedContent, setRegeneratedContent] = useState<any>(null);
   const { toast } = useToast();
 
