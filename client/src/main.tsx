@@ -10,6 +10,7 @@ import BillingSuccess from "./pages/BillingSuccess";
 import BillingCancel from "./pages/BillingCancel";
 import Account from "./pages/Account";
 import Auth from "./pages/Auth";
+import Pricing from "./pages/Pricing";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,6 +21,7 @@ import "./index.css";
 const router = createBrowserRouter([
   { path: "/", element: <LandingPage /> },
   { path: "/auth", element: <Auth /> },
+  { path: "/pricing", element: <Pricing /> },
   { path: "/upload", element: <SimpleUpload /> },
   { path: "/upload-old", element: <Home /> },
   { path: "/doc/:id", element: <DocResultPage /> },
