@@ -25,6 +25,7 @@ export default function SimpleUpload() {
     outputLanguage?: string;
     documentType?: string;
     eobData?: EOBData;
+    documentId?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -410,7 +411,7 @@ export default function SimpleUpload() {
             {/* EOB Analyzer for Pro users with EOB documents */}
             {result.eobData && (
               <div data-testid="eob-analyzer-container">
-                <EOBAnalyzer eobData={result.eobData} />
+                <EOBAnalyzer eobData={result.eobData} documentId={result.documentId} />
               </div>
             )}
             

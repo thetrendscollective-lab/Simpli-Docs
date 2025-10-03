@@ -97,12 +97,16 @@ export class MemStorage implements IStorage {
       summary: doc.summary ?? null,
       glossary: doc.glossary ?? null,
       language: doc.language ?? null,
+      detectedLanguage: doc.detectedLanguage ?? null,
+      confidence: doc.confidence ?? null,
       originalText: doc.originalText ?? null,
       processedSections: doc.processedSections ?? null,
       pageCount: doc.pageCount ?? 1,
       paymentAmount: doc.paymentAmount ?? null,
       paymentStatus: doc.paymentStatus ?? null,
       stripePaymentIntentId: doc.stripePaymentIntentId ?? null,
+      documentType: doc.documentType ?? null,
+      eobData: doc.eobData ?? null,
       createdAt: now,
       updatedAt: now
     };
