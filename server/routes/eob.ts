@@ -1,24 +1,26 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "../storage";
 import { EOBData, EOBLineItem } from "@shared/schema";
 import OpenAI from "openai";
+import { authenticateSupabase, AuthUser } from "../middleware/supabaseAuth";
 
 const router = Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 
 // Middleware to verify authentication and Pro/Family plan
-async function requireProPlan(req: any, res: any, next: any) {
+async function requireProPlan(req: Request, res: Response, next: NextFunction) {
   // Check if user is authenticated
-  if (!req.user || !req.user.claims || !req.user.claims.sub) {
+  const authUser = (req as any).user as AuthUser | undefined;
+  
+  if (!authUser) {
     return res.status(401).json({ 
       error: 'Authentication required',
       message: 'Please log in to access EOB features'
     });
   }
   
-  const userId = req.user.claims.sub;
-  const user = await storage.getUser(userId);
-  const currentPlan = user?.currentPlan || 'free';
+  const userId = authUser.id;
+  const currentPlan = authUser.currentPlan;
   
   // Check if user has Pro or Family plan
   if (currentPlan !== 'pro' && currentPlan !== 'family') {
@@ -30,13 +32,13 @@ async function requireProPlan(req: any, res: any, next: any) {
   }
   
   // Attach user info to request for use in handlers
-  req.userId = userId;
-  req.currentPlan = currentPlan;
+  (req as any).userId = userId;
+  (req as any).currentPlan = currentPlan;
   next();
 }
 
 // Export EOB line items as CSV
-router.get('/:documentId/export-csv', requireProPlan, async (req, res) => {
+router.get('/:documentId/export-csv', authenticateSupabase, requireProPlan, async (req, res) => {
   try {
     const { documentId } = req.params;
     const userId = (req as any).userId;
@@ -123,7 +125,7 @@ router.get('/:documentId/export-csv', requireProPlan, async (req, res) => {
 });
 
 // Generate appeal letter for disputed claims
-router.get('/:documentId/generate-appeal', requireProPlan, async (req, res) => {
+router.get('/:documentId/generate-appeal', authenticateSupabase, requireProPlan, async (req, res) => {
   try {
     const { documentId } = req.params;
     const userId = (req as any).userId;
