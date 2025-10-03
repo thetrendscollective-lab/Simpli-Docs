@@ -162,7 +162,7 @@ export default function LandingPage() {
     {
       name: "Standard", 
       tier: "standard",
-      price: "$9.99",
+      price: "$4.99",
       period: "/month",
       description: "For individuals and small teams",
       features: [
@@ -178,7 +178,7 @@ export default function LandingPage() {
     {
       name: "Pro",
       tier: "pro",
-      price: "$24.99", 
+      price: "$9.99", 
       period: "/month",
       description: "For power users and professionals",
       features: [
@@ -195,7 +195,7 @@ export default function LandingPage() {
     {
       name: "Family",
       tier: "family",
-      price: "$39.99",
+      price: "$14.99",
       period: "/month", 
       description: "For families and caregivers",
       features: [
