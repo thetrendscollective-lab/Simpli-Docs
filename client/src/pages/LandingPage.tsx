@@ -59,7 +59,6 @@ export default function LandingPage() {
       icon: <Eye className="h-6 w-6" />,
       color: "bg-blue-500",
       items: [
-        "Highlight-to-Explain: instant plain-language popovers", 
         "Reading level dropdown: Simple / Standard / Professional",
         "Confidence & source chips with document quotes",
         "Clear explanations of complex terms"
