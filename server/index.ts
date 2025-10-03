@@ -137,6 +137,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Supabase config endpoint (MUST be before Replit Auth and Vite middleware)
+  app.get('/api/config', (req, res) => {
+    res.json({
+      supabaseUrl: process.env.SUPABASE_URL || '',
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+    });
+  });
+
   // Setup Replit Auth (must be before routes)
   await setupAuth(app);
 
