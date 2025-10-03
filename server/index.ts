@@ -17,6 +17,7 @@ import { insertQASchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { getErrorMessage } from "./utils";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { optionalAuth } from "./middleware/supabaseAuth";
 import { getStripe } from "./stripe";
 
 const openaiService = new OpenAIService();
@@ -175,10 +176,10 @@ app.use((req, res, next) => {
   // Simplified docs upload route
   app.use("/api/docs", docsRouter);
 
-  // Main processing route (consolidated)
-  app.use("/api", apiRouter);
+  // Main processing route (consolidated) - with optional auth
+  app.use("/api", optionalAuth, apiRouter);
 
-  // EOB-specific routes
+  // EOB-specific routes - require authentication
   app.use("/api/eob", eobRouter);
 
   // Stripe routes
