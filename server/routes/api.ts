@@ -6,6 +6,8 @@ import OpenAI from "openai";
 import { DocumentProcessor } from "../services/documentProcessor";
 import { OCRService } from "../services/ocrService";
 import { LanguageDetectionService } from "../services/languageDetectionService";
+import { EOBDetectionService } from "../services/eobDetectionService";
+import { EOBExtractionService } from "../services/eobExtractionService";
 import { storage } from "../storage";
 
 const router = Router();
@@ -18,6 +20,8 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const documentProcessor = new DocumentProcessor();
 const ocrService = new OCRService();
 const languageDetectionService = new LanguageDetectionService(process.env.OPENAI_API_KEY || '');
+const eobDetectionService = new EOBDetectionService();
+const eobExtractionService = new EOBExtractionService();
 
 const MONTHLY_FREE_LIMIT = 2; // 2 documents per month for free users
 
@@ -132,6 +136,30 @@ router.post('/process', upload.single('file'), async (req, res) => {
     }
 
     console.log(`Output language: ${outputLanguage}, Detected: ${detectedLanguage} (${confidence}% confidence)`);
+
+    // EOB Detection and Extraction for Pro users
+    let eobData = null;
+    let documentType = 'general';
+    
+    if (currentPlan === 'pro' || currentPlan === 'family') {
+      console.log('Checking if document is an EOB...');
+      const eobDetection = eobDetectionService.detectEOB(text);
+      
+      if (eobDetection.isEOB) {
+        console.log(`EOB detected with ${eobDetection.confidence}% confidence: ${eobDetection.reason}`);
+        documentType = 'eob';
+        
+        try {
+          console.log('Extracting structured EOB data...');
+          eobData = await eobExtractionService.extractEOBData(text);
+          console.log(`EOB extraction complete. Found ${eobData.lineItems.length} line items, total patient responsibility: $${eobData.financialSummary.totalPatientResponsibility}`);
+        } catch (error) {
+          console.error('Failed to extract EOB data:', error);
+        }
+      } else {
+        console.log(`Document is not an EOB (${eobDetection.confidence}% confidence)`);
+      }
+    }
 
     // Check if OpenAI API key is available
     if (!process.env.OPENAI_API_KEY) {
@@ -304,6 +332,8 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
       detectedLanguageName,
       confidence,
       outputLanguage,
+      documentType,
+      eobData,
       usage: {
         remaining: updatedUsage.remaining,
         limit: MONTHLY_FREE_LIMIT
