@@ -1,6 +1,6 @@
 # Overview
 
-Simpli-Docs (formerly Plain-Language Doc Explainer) is a web application that transforms complex legal and medical documents into clear, understandable explanations. Users can upload documents in various formats (PDF, DOCX, TXT, PNG, JPG), and the application provides plain-language summaries, technical term definitions, and an interactive Q&A interface with confidence scores. The system supports multilingual output, features a specialized Insurance Bill Analyzer (EOB) for Pro users, and includes Google Calendar integration for deadline management. The application emphasizes privacy and safety with clear disclaimers.
+Simpli-Docs (formerly Plain-Language Doc Explainer) is a web application that transforms complex legal and medical documents into clear, understandable explanations. **Authentication is required for all document processing** - users must create a free account before uploading any documents. The application provides plain-language summaries, technical term definitions, and an interactive Q&A interface with confidence scores. The system supports multilingual output, features a specialized Insurance Bill Analyzer (EOB) for Pro users, and includes Google Calendar integration for deadline management. The application emphasizes privacy and safety with clear disclaimers.
 
 # User Preferences
 
@@ -65,7 +65,16 @@ The application uses a hybrid storage approach with Drizzle ORM for type-safe da
 
 ## Authentication and Authorization
 
-The application uses Supabase Auth for user authentication with Stripe-based subscription management. Features are tiered based on subscription plans (Free, Standard, Pro, Family).
+**Mandatory Account Creation (October 2025)**: All users must create a free account before uploading or processing any documents. The application uses Supabase Auth for user authentication with Stripe-based subscription management. Features are tiered based on subscription plans (Free, Standard, Pro, Family).
+
+**Authentication Flow:**
+1. Unauthenticated users visiting /upload see a "Create Free Account" card with:
+   - Clear explanation of free tier benefits (2 docs/month, AI summaries, glossaries, Q&A)
+   - "Create Free Account" button directing to /auth
+   - Sign in link for existing users
+2. After authentication, users can access the document upload interface
+3. All document upload/processing API routes require valid Supabase authentication token
+4. Landing page CTAs direct unauthenticated users to sign up before accessing features
 
 **Subscription Tiers:**
 - **Free**: 2 documents/month, English-only output
