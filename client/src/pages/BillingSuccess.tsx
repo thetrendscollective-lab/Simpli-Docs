@@ -39,9 +39,10 @@ export default function BillingSuccess() {
       
       const checkSubscription = async () => {
         try {
-          const response = await fetch('/api/user/profile', {
+          const token = await (await import('@/lib/supabase')).getAccessToken();
+          const response = await fetch('/api/stripe/user/profile', {
             headers: {
-              'Authorization': `Bearer ${(await import('@/lib/supabase')).getAccessToken()}`
+              'Authorization': `Bearer ${token}`
             }
           });
           

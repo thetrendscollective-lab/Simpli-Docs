@@ -57,13 +57,13 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
           const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
           const priceId = subscription.items.data[0]?.price.id;
           
-          // Determine plan tier from price ID
+          // Determine plan tier from price ID (handle both test and production)
           let planTier = 'free';
-          if (priceId === process.env.PRICE_STANDARD) {
+          if (priceId === process.env.PRICE_STANDARD || priceId === process.env.TESTING_PRICE_STANDARD) {
             planTier = 'standard';
-          } else if (priceId === process.env.PRICE_PRO) {
+          } else if (priceId === process.env.PRICE_PRO || priceId === process.env.TESTING_PRICE_PRO) {
             planTier = 'pro';
-          } else if (priceId === process.env.PRICE_FAMILY) {
+          } else if (priceId === process.env.PRICE_FAMILY || priceId === process.env.TESTING_PRICE_FAMILY) {
             planTier = 'family';
           }
 
