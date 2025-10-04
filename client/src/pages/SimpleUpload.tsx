@@ -475,11 +475,20 @@ export default function SimpleUpload() {
               <CardContent>
                 {result.actionItems.length > 0 ? (
                   <ul className="list-disc pl-6 space-y-2" data-testid="list-actionitems">
-                    {result.actionItems.map((a, i) => (
-                      <li key={i} className="text-slate-700 dark:text-slate-300">
-                        {a}
-                      </li>
-                    ))}
+                    {result.actionItems.map((a: any, i: number) => {
+                      const task = typeof a === 'string' ? a : a.task;
+                      const hasDate = a.date && a.date !== null;
+                      return (
+                        <li key={i} className="text-slate-700 dark:text-slate-300 flex items-center justify-between gap-2">
+                          <span>{task}</span>
+                          {hasDate && (
+                            <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded whitespace-nowrap">
+                              {a.date}{a.time ? ` ${a.time}` : ''}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="text-slate-500 dark:text-slate-400">No action items.</p>
