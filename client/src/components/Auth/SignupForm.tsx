@@ -56,17 +56,32 @@ export default function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormPro
 
       if (error) throw error;
 
-      toast({
-        title: 'Account created!',
-        description: data.user?.identities?.length === 0 
-          ? 'This email is already registered. Please log in instead.'
-          : 'Please check your email to verify your account.',
-      });
-
+      // Check if this email is already registered
       if (data.user?.identities?.length === 0) {
+        toast({
+          title: 'Email already registered',
+          description: 'This email is already registered. Please log in instead.',
+        });
         if (onSwitchToLogin) onSwitchToLogin();
-      } else if (onSuccess) {
-        onSuccess();
+        return;
+      }
+
+      // Check if we have an active session (email confirmation might be required)
+      if (data.session) {
+        // Session active - user can proceed immediately
+        toast({
+          title: 'Account created!',
+          description: 'Welcome to Simpli-Docs!',
+        });
+        if (onSuccess) onSuccess();
+      } else {
+        // No session - email verification required
+        toast({
+          title: 'Verify your email',
+          description: 'Please check your email and click the verification link to complete your signup.',
+          variant: 'default',
+        });
+        // Don't call onSuccess - user needs to verify email first
       }
     } catch (error: any) {
       toast({

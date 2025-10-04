@@ -150,11 +150,15 @@ app.use((req, res, next) => {
   // Setup Replit Auth (must be before routes)
   await setupAuth(app);
 
-  // Auth route
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Auth route - using Supabase authentication
+  app.get('/api/auth/user', authenticateSupabase, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const authUser = req.user as AuthUser;
+      if (!authUser) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      
+      const user = await storage.getUser(authUser.id);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -280,13 +284,12 @@ app.use((req, res, next) => {
       }
 
       // Enforce language restriction: only paid users can use non-English languages
-      const isAuthenticated = !!(req as any).user;
+      const authUser = (req as any).user as AuthUser;
       let currentPlan = 'free';
       
-      if (isAuthenticated) {
-        const userId = (req as any).user.claims.sub;
-        const user = await storage.getUser(userId);
-        currentPlan = user?.currentPlan || 'free';
+      if (authUser) {
+        // Get current plan from authenticated user
+        currentPlan = authUser.currentPlan || 'free';
       }
       
       // Only Standard, Pro, and Family plans can use non-English languages
