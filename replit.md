@@ -1,6 +1,6 @@
 # Overview
 
-Simpli-Docs (formerly Plain-Language Doc Explainer) is a web application that transforms complex legal and medical documents into clear, understandable explanations. Users can upload documents in various formats (PDF, DOCX, TXT, PNG, JPG), and the application provides plain-language summaries, technical term definitions, and an interactive Q&A interface. The system supports multilingual output and features a specialized Insurance Bill Analyzer (EOB) for Pro users. The application emphasizes privacy and safety with clear disclaimers.
+Simpli-Docs (formerly Plain-Language Doc Explainer) is a web application that transforms complex legal and medical documents into clear, understandable explanations. Users can upload documents in various formats (PDF, DOCX, TXT, PNG, JPG), and the application provides plain-language summaries, technical term definitions, and an interactive Q&A interface with confidence scores. The system supports multilingual output, features a specialized Insurance Bill Analyzer (EOB) for Pro users, and includes Google Calendar integration for deadline management. The application emphasizes privacy and safety with clear disclaimers.
 
 # User Preferences
 
@@ -112,6 +112,30 @@ The application uses Replit Auth for user authentication with Stripe-based subsc
 The architecture prioritizes privacy, accessibility, and user experience while maintaining clear separation of concerns between document processing, AI integration, and user interface components.
 
 ## Key Features
+
+### Calendar Integration for Deadlines (October 2025)
+AI automatically extracts dates and deadlines from action items in documents. Users can add these deadlines directly to their Google Calendar with one click.
+
+**Features:**
+- AI extracts dates (YYYY-MM-DD) and times (HH:MM) from action items
+- Action items stored with structured date/time data
+- "Add to Calendar" buttons appear for items with dates
+- Integration with Google Calendar via Replit connector
+- Events created with reminders (1 day before + 30 min before)
+
+**Technical Implementation:**
+- Enhanced AI prompt to extract dates from action item text
+- Database: `actionItems` JSONB field stores `{task, date, time}` objects
+- Service: `CalendarService` using Google Calendar API v3
+- Endpoint: POST `/api/calendar/add-to-calendar`
+- Frontend: Calendar buttons in SummaryTab Recommendations section
+- Date display: badges show dates alongside action items
+
+**User Experience:**
+- SimpleUpload page: Shows action items with date badges
+- SummaryTab: Shows "Add to Calendar" buttons for dated items
+- Button states: "Add to Calendar" → "Added ✓"
+- Error handling for unconnected calendars
 
 ### Automatic Language Detection (October 2025)
 - Automatically detects document language using OpenAI with 21-language support
