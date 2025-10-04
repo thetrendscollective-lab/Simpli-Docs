@@ -10,7 +10,19 @@ export default function Auth() {
     searchParams.get('mode') === 'signup' ? 'signup' : 'login'
   );
 
-  const handleSuccess = () => {
+  const handleSuccess = async () => {
+    // Check for pending upgrade from pricing page
+    const pendingUpgrade = sessionStorage.getItem('pendingUpgrade');
+    if (pendingUpgrade) {
+      sessionStorage.removeItem('pendingUpgrade');
+      console.log('Resuming pending upgrade after auth:', pendingUpgrade);
+      
+      // Trigger the upgrade flow
+      const { handleUpgrade } = await import('@/lib/handleUpgrade');
+      await handleUpgrade(pendingUpgrade as 'standard' | 'pro' | 'family');
+      return; // Don't navigate - handleUpgrade will redirect to Stripe
+    }
+    
     const redirect = searchParams.get('redirect') || '/upload';
     navigate(redirect);
   };
