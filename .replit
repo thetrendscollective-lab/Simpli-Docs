@@ -15,6 +15,10 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 34721
+externalPort = 8081
+
+[[ports]]
 localPort = 35025
 externalPort = 5000
 
@@ -66,7 +70,7 @@ externalPort = 3003
 PORT = "5000"
 
 [agent]
-integrations = ["javascript_openai:1.0.0", "javascript_mem_db:1.0.0", "javascript_object_storage:1.0.0", "javascript_stripe:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0"]
+integrations = ["javascript_openai:1.0.0", "javascript_mem_db:1.0.0", "javascript_object_storage:1.0.0", "javascript_stripe:1.0.0", "javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "google-calendar:1.0.0"]
 
 [workflows]
 runButton = "Project"
