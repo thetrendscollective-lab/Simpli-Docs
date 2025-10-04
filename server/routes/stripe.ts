@@ -128,4 +128,32 @@ router.post('/create-portal-session', authenticateSupabase, async (req: Request,
 // Note: Webhook is handled in server/index.ts before express.json middleware
 // to preserve raw body for Stripe signature verification
 
+router.get('/user/profile', authenticateSupabase, async (req: Request, res: Response) => {
+  try {
+    const authUser = (req as any).user as AuthUser;
+    if (!authUser) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const userId = authUser.id;
+    const dbUser = await storage.getUser(userId);
+
+    if (!dbUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      id: dbUser.id,
+      email: dbUser.email,
+      currentPlan: dbUser.currentPlan || 'free',
+      subscriptionStatus: dbUser.subscriptionStatus,
+      stripeCustomerId: dbUser.stripeCustomerId,
+      currentPeriodEnd: dbUser.currentPeriodEnd
+    });
+  } catch (e: any) {
+    console.error('Error fetching user profile:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
