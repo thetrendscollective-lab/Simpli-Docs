@@ -18,7 +18,7 @@ import { insertQASchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { getErrorMessage } from "./utils";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { optionalAuth } from "./middleware/supabaseAuth";
+import { authenticateSupabase, AuthUser } from "./middleware/supabaseAuth";
 import { getStripe } from "./stripe";
 
 const openaiService = new OpenAIService();
@@ -163,36 +163,37 @@ app.use((req, res, next) => {
   });
 
   // Mount the route handlers as specified - all with optional auth for Supabase support
-  app.post("/api/upload/init", optionalAuth, uploadInit);
-  app.post("/api/upload/complete", optionalAuth, uploadComplete);
-  app.get("/api/docs/:id", optionalAuth, getDoc);
-  app.get("/api/docs/:id/text", optionalAuth, getDocText);
-  app.post("/api/explain", optionalAuth, postExplain);
-  app.get("/api/explanations/:document_id", optionalAuth, getExplanation);
-  app.get("/api/docs/latest-id", optionalAuth, getLatestDocId);
+  app.post("/api/upload/init", authenticateSupabase, uploadInit);
+  app.post("/api/upload/complete", authenticateSupabase, uploadComplete);
+  app.get("/api/docs/:id", authenticateSupabase, getDoc);
+  app.get("/api/docs/:id/text", authenticateSupabase, getDocText);
+  app.post("/api/explain", authenticateSupabase, postExplain);
+  app.get("/api/explanations/:document_id", authenticateSupabase, getExplanation);
+  app.get("/api/docs/latest-id", authenticateSupabase, getLatestDocId);
 
   // Compatibility route for frontend - maps old endpoint to new handler
-  app.post("/api/documents/upload", optionalAuth, uploadComplete);
+  app.post("/api/documents/upload", authenticateSupabase, uploadComplete);
 
-  // Simplified docs upload route - with optional auth
-  app.use("/api/docs", optionalAuth, docsRouter);
+  // Simplified docs upload route - requires authentication
+  app.use("/api/docs", authenticateSupabase, docsRouter);
 
-  // Main processing route (consolidated) - with optional auth
-  app.use("/api", optionalAuth, apiRouter);
+  // Main processing route (consolidated) - requires authentication
+  app.use("/api", authenticateSupabase, apiRouter);
 
   // EOB-specific routes - require authentication
   app.use("/api/eob", eobRouter);
 
-  // Calendar routes
-  app.use("/api/calendar", optionalAuth, calendarRouter);
+  // Calendar routes - require authentication
+  app.use("/api/calendar", authenticateSupabase, calendarRouter);
 
   // Stripe routes
   app.use("/api/stripe", stripeRouter);
 
-  // Session management
-  app.post("/api/session", optionalAuth, async (req, res) => {
+  // Session management - require authentication
+  app.post("/api/session", authenticateSupabase, async (req, res) => {
     try {
-      const sessionId = randomUUID();
+      const authUser = (req as any).user as AuthUser;
+      const sessionId = authUser.id; // Use user ID as session ID for authenticated users
       res.json({ sessionId });
     } catch (error) {
       console.error("Error creating session:", error);
@@ -203,8 +204,8 @@ app.use((req, res, next) => {
   // Note: Stripe subscription checkout is handled by /api/stripe/create-checkout-session
   // in the stripeRouter (see server/routes/stripe.ts) with proper authentication
 
-  // Document processing routes - Optional auth (free tier allowed)
-  app.post("/api/documents/:id/summarize", optionalAuth, async (req, res) => {
+  // Document processing routes - Require authentication
+  app.post("/api/documents/:id/summarize", authenticateSupabase, async (req, res) => {
     try {
       const { id } = req.params;
       const { language = 'en' } = req.body;
@@ -254,7 +255,7 @@ app.use((req, res, next) => {
     }
   });
 
-  app.post("/api/documents/:id/regenerate", optionalAuth, async (req, res) => {
+  app.post("/api/documents/:id/regenerate", authenticateSupabase, async (req, res) => {
     try {
       const { id } = req.params;
       const { readingLevel = 'standard' } = req.body;
@@ -421,7 +422,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.post("/api/documents/:id/glossary", optionalAuth, async (req, res) => {
+  app.post("/api/documents/:id/glossary", authenticateSupabase, async (req, res) => {
     try {
       const { id } = req.params;
       const { language = 'en' } = req.body;
@@ -469,7 +470,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.post("/api/documents/:id/ask", optionalAuth, async (req, res) => {
+  app.post("/api/documents/:id/ask", authenticateSupabase, async (req, res) => {
     try {
       const { id } = req.params;
       const { question, language = 'en' } = req.body;
@@ -530,7 +531,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.get("/api/documents/:id/qa", optionalAuth, async (req, res) => {
+  app.get("/api/documents/:id/qa", authenticateSupabase, async (req, res) => {
     try {
       const { id } = req.params;
       const sessionId = req.headers['x-session-id'] as string;
@@ -556,7 +557,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.delete("/api/documents/:id", optionalAuth, async (req, res) => {
+  app.delete("/api/documents/:id", authenticateSupabase, async (req, res) => {
     try {
       const { id } = req.params;
       const sessionId = req.headers['x-session-id'] as string;
@@ -599,7 +600,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
   });
 
   // Payment routes - Optional auth (sessionId-based access)
-  app.post("/api/create-payment-intent", optionalAuth, async (req, res) => {
+  app.post("/api/create-payment-intent", authenticateSupabase, async (req, res) => {
     try {
       const { documentId } = req.body;
       const sessionId = req.headers['x-session-id'] as string;
@@ -652,7 +653,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.post("/api/documents/:documentId/verify-payment", optionalAuth, async (req, res) => {
+  app.post("/api/documents/:documentId/verify-payment", authenticateSupabase, async (req, res) => {
     try {
       const { documentId } = req.params;
       const sessionId = req.headers['x-session-id'] as string;
