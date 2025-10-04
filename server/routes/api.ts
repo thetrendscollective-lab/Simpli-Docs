@@ -263,9 +263,11 @@ Return strict JSON with this shape:
   "summary": "120-200 words executive summary at the specified reading level",
   "keyPoints": ["3-7 concise bullets"],
   "glossary": [{"term":"...","definition":"..."}],
-  "actionItems": ["actionable next steps"],
+  "actionItems": [{"task":"actionable step","date":"YYYY-MM-DD or null","time":"HH:MM or null"}],
   "readingLevelUsed": "${level}"
 }
+
+IMPORTANT: For actionItems, extract any dates/deadlines mentioned in the document. If an action has a specific date mentioned (e.g., "respond by January 15", "payment due March 1"), include it in ISO format (YYYY-MM-DD). If a time is mentioned, include it as HH:MM in 24-hour format. If no date/time is mentioned for an action, use null.
 
 CRITICAL OUTPUT LANGUAGE REQUIREMENT:
 - ALL output (summary, keyPoints, glossary definitions, actionItems) MUST be in ${languageName}.
@@ -324,11 +326,23 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
       }));
     }
 
+    // Normalize action items to always have task, date, and time fields
+    const normalizedActionItems = (parsed.actionItems || parsed.action_items || []).map((item: any) => {
+      if (typeof item === 'string') {
+        return { task: item, date: null, time: null };
+      }
+      return {
+        task: item.task || item,
+        date: item.date || null,
+        time: item.time || null
+      };
+    });
+
     const result = {
       summary: parsed.summary || '',
       keyPoints: parsed.keyPoints || parsed.key_points || [],
       glossary: Array.isArray(parsed.glossary) ? parsed.glossary : [],
-      actionItems: parsed.actionItems || parsed.action_items || [],
+      actionItems: normalizedActionItems,
       readingLevelUsed: parsed.readingLevelUsed || level,
       raw: rawResponse
     };
@@ -351,6 +365,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
           originalText: text,
           summary: result.summary,
           glossary: result.glossary,
+          actionItems: result.actionItems,
           language: outputLanguage,
           detectedLanguage,
           confidence,
