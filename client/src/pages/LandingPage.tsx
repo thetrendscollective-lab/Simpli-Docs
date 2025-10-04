@@ -55,90 +55,47 @@ export default function LandingPage() {
 
   const features = [
     {
-      category: "Understand at a Glance",
-      icon: <Eye className="h-6 w-6" />,
-      color: "bg-blue-500",
-      items: [
-        "Reading level dropdown: Simple / Standard / Professional",
-        "Confidence & source chips with document quotes",
-        "Clear explanations of complex terms"
-      ]
-    },
-    {
-      category: "Actionable Guidance", 
-      icon: <Target className="h-6 w-6" />,
-      color: "bg-green-500",
-      items: [
-        "Deadline detector with countdown & calendar integration",
-        "Smart Q&A with grounded citations",
-        "One-click templates: appeals, emails, record requests",
-        "Automated checklist generation from deadlines"
-      ]
-    },
-    {
-      category: "Medical & Insurance Bills",
-      icon: <Heart className="h-6 w-6" />,
-      color: "bg-red-500", 
-      items: [
-        "Insurance Bill Analyzer - see what you owe & why (EOB)",
-        "Plain-language medical code definitions (ICD/CPT)",
-        "Duplicate billing alerts & appeal deadline tracking",
-        "Doctor visit prep: smart questions to ask"
-      ]
-    },
-    {
-      category: "Legal Document Clarity",
-      icon: <BookOpen className="h-6 w-6" />,
-      color: "bg-purple-500",
-      items: [
-        "Parties, jurisdiction & deadlines panel",
-        "Clause snapshots: compress & expand details", 
-        "Form finder: official forms matching your document",
-        "Response clocks for legal deadlines"
-      ]
-    },
-    {
-      category: "Trust & Privacy",
-      icon: <Shield className="h-6 w-6" />,
-      color: "bg-orange-500",
-      items: [
-        "Ephemeral Mode: auto-delete after 24 hours",
-        "Share-safe links: time-limited & revocable",
-        "PII-gentle previews with smart blurring",
-        "SOC 2, HIPAA & GDPR compliant processing"
-      ]
-    },
-    {
-      category: "Accessibility & Language",
-      icon: <Accessibility className="h-6 w-6" />,
-      color: "bg-indigo-500",
-      items: [
-        "Read-aloud for summaries (Web Speech API)",
-        "Dyslexia-friendly mode with font/spacing",
-        "Translate + explain (21 languages supported)",
-        "High-contrast mode for visual accessibility"
-      ]
-    },
-    {
-      category: "Workflow & Export",
-      icon: <Download className="h-6 w-6" />,
-      color: "bg-teal-500", 
-      items: [
-        "Case Binder: group docs into timeline",
-        "One-click branded PDF exports",
-        "CSV export of action items & deadlines",
-        "Notes & bookmarks with personal annotations"
-      ]
-    },
-    {
-      category: "Smart Processing",
+      category: "Smart AI Analysis",
       icon: <Sparkles className="h-6 w-6" />,
       color: "bg-pink-500",
       items: [
         "AI-powered document analysis with GPT-4o",
-        "OCR for scanned documents & images", 
-        "Multi-format support: PDF, DOCX, TXT, images",
-        "Intelligent glossary generation"
+        "Plain-language summaries at 3 reading levels",
+        "Intelligent glossary of complex terms",
+        "OCR for scanned documents & images"
+      ]
+    },
+    {
+      category: "Interactive Q&A", 
+      icon: <MessageCircle className="h-6 w-6" />,
+      color: "bg-blue-500",
+      items: [
+        "Ask questions about your document",
+        "AI answers with direct citations",
+        "Confidence scores for every answer",
+        "Multi-format support: PDF, DOCX, TXT, images"
+      ]
+    },
+    {
+      category: "Insurance Bill Analyzer (Pro)",
+      icon: <Heart className="h-6 w-6" />,
+      color: "bg-red-500", 
+      items: [
+        "See exactly what you owe and why",
+        "Duplicate billing detection",
+        "Financial breakdown charts",
+        "Export to CSV or generate appeal letters"
+      ]
+    },
+    {
+      category: "Language & Accessibility",
+      icon: <Globe className="h-6 w-6" />,
+      color: "bg-indigo-500",
+      items: [
+        "Automatic language detection",
+        "21-language translation support",
+        "Adjustable reading levels",
+        "Dark mode for comfortable reading"
       ]
     }
   ];
@@ -151,9 +108,9 @@ export default function LandingPage() {
       description: "Perfect for trying out Simpli-Docs",
       features: [
         "2 documents per month",
-        "Basic explanations", 
-        "Standard glossary",
-        "Email support"
+        "AI summaries & glossaries", 
+        "Q&A with confidence scores",
+        "English output only"
       ],
       cta: "Start Free",
       popular: false
@@ -163,13 +120,13 @@ export default function LandingPage() {
       tier: "standard",
       price: "$4.99",
       period: "/month",
-      description: "For individuals and small teams",
+      description: "For individuals who need unlimited access",
       features: [
-        "Unlimited explanations",
-        "Deadline → calendar integration", 
-        "Read-aloud functionality",
-        "21-language translation",
-        "Priority support"
+        "Unlimited documents",
+        "All 3 reading levels (Simple/Standard/Professional)",
+        "21-language translation support",
+        "Automatic language detection",
+        "Priority email support"
       ],
       cta: "Start Standard",
       popular: true
@@ -179,14 +136,14 @@ export default function LandingPage() {
       tier: "pro",
       price: "$9.99", 
       period: "/month",
-      description: "For power users and professionals",
+      description: "For medical bills and complex documents",
       features: [
         "Everything in Standard",
-        "Medical bill analyzer with cost breakdown",
-        "Legal deadline clocks",
-        "Case binder & timeline",
-        "Share-safe links",
-        "Branded PDF exports"
+        "Insurance Bill Analyzer (EOB)",
+        "Duplicate billing detection",
+        "Financial breakdown charts",
+        "CSV exports & appeal letters",
+        "Priority support"
       ],
       cta: "Start Pro", 
       popular: false
@@ -196,13 +153,13 @@ export default function LandingPage() {
       tier: "family",
       price: "$14.99",
       period: "/month", 
-      description: "For families and caregivers",
+      description: "Pro features at a family-friendly price",
       features: [
         "Everything in Pro",
-        "3-5 user seats",
-        "Shared case binder",
-        "Family member access",
-        "Caregiver dashboard"
+        "Best value for households",
+        "Manage multiple family medical bills",
+        "Unlimited document processing",
+        "Dedicated family support"
       ],
       cta: "Start Family",
       popular: false
@@ -425,20 +382,20 @@ export default function LandingPage() {
           {/* Trust Indicators */}
           <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-muted-foreground mb-16">
             <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              SOC 2 Compliant
+              <Sparkles className="h-4 w-4" />
+              Powered by GPT-4o
             </div>
             <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4" />
-              HIPAA Secure
+              <FileText className="h-4 w-4" />
+              PDF, DOCX, Images & More
             </div>
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              GDPR Compliant
+              21 Languages Supported
             </div>
             <div className="flex items-center gap-2">
-              <Star className="h-4 w-4" />
-              99.9% Uptime
+              <Zap className="h-4 w-4" />
+              Instant Results
             </div>
           </div>
         </div>
