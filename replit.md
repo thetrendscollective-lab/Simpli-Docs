@@ -65,7 +65,7 @@ The application uses a hybrid storage approach with Drizzle ORM for type-safe da
 
 ## Authentication and Authorization
 
-The application uses Replit Auth for user authentication with Stripe-based subscription management. Features are tiered based on subscription plans (Free, Standard, Pro, Family).
+The application uses Supabase Auth for user authentication with Stripe-based subscription management. Features are tiered based on subscription plans (Free, Standard, Pro, Family).
 
 **Subscription Tiers:**
 - **Free**: 2 documents/month, English-only output
@@ -73,8 +73,17 @@ The application uses Replit Auth for user authentication with Stripe-based subsc
 - **Pro ($9.99/mo)**: All Standard features + Insurance Bill Analyzer (EOB), deadline tracking, exports
 - **Family ($14.99/mo)**: Pro features for multiple family members
 
+**Subscription Flow (October 2025):**
+- User clicks upgrade → authenticates with Supabase if needed
+- Creates Stripe checkout session with userId in metadata
+- After payment, Stripe webhook updates user's subscription in database
+- BillingSuccess page verifies authentication and polls for subscription activation
+- Shows loading state while webhook processes (max 20 seconds)
+- Only allows access to features once subscription is confirmed
+- Handles both test and production Stripe price IDs
+
 **Security Measures:**
-- Replit Auth integration with JWT-based session management
+- Supabase Auth with JWT-based session management
 - Plan-based feature gating (middleware enforcement)
 - Document ownership verification (userId-based access control)
 - File type validation and size limits (25MB max)
