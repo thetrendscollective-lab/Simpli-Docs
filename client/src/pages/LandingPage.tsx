@@ -39,8 +39,12 @@ export default function LandingPage() {
 
   const handleSubscribe = async (tier: string | null) => {
     if (!tier) {
-      // Free tier - just go to upload page
-      window.location.href = '/upload';
+      // Free tier - redirect to auth if not logged in, otherwise go to upload
+      if (isAuthenticated) {
+        window.location.href = '/upload';
+      } else {
+        window.location.href = '/auth';
+      }
       return;
     }
 
@@ -220,9 +224,9 @@ export default function LandingPage() {
                       Log In
                     </Button>
                   </Link>
-                  <Link to="/upload">
+                  <Link to="/auth">
                     <Button variant="outline" data-testid="button-try-now">
-                      Try Now
+                      Sign Up Free
                     </Button>
                   </Link>
                 </>
@@ -252,9 +256,9 @@ export default function LandingPage() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Link to="/upload">
+            <Link to={isAuthenticated ? "/upload" : "/auth"}>
               <Button size="lg" className="text-lg px-8 py-6" data-testid="button-start-free">
-                Start Free - No Credit Card Required
+                {isAuthenticated ? "Go to Dashboard" : "Create Free Account"}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
@@ -288,9 +292,9 @@ export default function LandingPage() {
                         We're preparing an interactive demo to show you exactly how Simpli-Docs works.
                         For now, try uploading a document to see the magic happen!
                       </p>
-                      <Link to="/upload">
+                      <Link to={isAuthenticated ? "/upload" : "/auth"}>
                         <Button size="lg" className="text-lg px-6" onClick={() => setIsDemoOpen(false)}>
-                          Try It Now - Upload Your Document
+                          {isAuthenticated ? "Upload Your Document" : "Create Account to Upload"}
                           <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
                       </Link>
@@ -363,9 +367,9 @@ export default function LandingPage() {
                       Upload your document and experience the power of AI-driven document understanding
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <Link to="/upload">
+                      <Link to={isAuthenticated ? "/upload" : "/auth"}>
                         <Button size="lg" className="w-full sm:w-auto" onClick={() => setIsDemoOpen(false)}>
-                          Start Free Trial
+                          {isAuthenticated ? "Start Free Trial" : "Create Free Account"}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                       </Link>
@@ -558,9 +562,9 @@ export default function LandingPage() {
             Join thousands who've made complex documents simple with Simpli-Docs
           </p>
           
-          <Link to="/upload">
+          <Link to={isAuthenticated ? "/upload" : "/auth"}>
             <Button size="lg" className="text-lg px-8 py-6" data-testid="button-get-started">
-              Get Started Free
+              {isAuthenticated ? "Get Started" : "Create Free Account"}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
