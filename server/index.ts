@@ -9,6 +9,7 @@ import docsRouter from "./routes/docs";
 import apiRouter from "./routes/api";
 import stripeRouter from "./routes/stripe";
 import eobRouter from "./routes/eob";
+import calendarRouter from "./routes/calendar";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { OpenAIService } from "./services/openai";
@@ -181,6 +182,9 @@ app.use((req, res, next) => {
 
   // EOB-specific routes - require authentication
   app.use("/api/eob", eobRouter);
+
+  // Calendar routes
+  app.use("/api/calendar", optionalAuth, calendarRouter);
 
   // Stripe routes
   app.use("/api/stripe", stripeRouter);
