@@ -181,7 +181,7 @@ app.use((req, res, next) => {
   app.use("/api", authenticateSupabase, apiRouter);
 
   // EOB-specific routes - require authentication
-  app.use("/api/eob", eobRouter);
+  app.use("/api/eob", authenticateSupabase, eobRouter);
 
   // Calendar routes - require authentication
   app.use("/api/calendar", authenticateSupabase, calendarRouter);
