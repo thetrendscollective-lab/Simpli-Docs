@@ -1,4 +1,8 @@
 import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { User, LogOut, Settings } from "lucide-react";
+import { Link } from "wouter";
 
 interface HeaderProps {
   language: string;
@@ -6,6 +10,7 @@ interface HeaderProps {
 }
 
 export default function Header({ language, onLanguageChange }: HeaderProps) {
+  const { user, isAuthenticated } = useAuth();
   const languages = [
     { code: "en", name: "English", native: "English" },
     { code: "es", name: "Spanish", native: "Español" },
@@ -63,6 +68,31 @@ export default function Header({ language, onLanguageChange }: HeaderProps) {
                 ))}
               </select>
             </div>
+            
+            {isAuthenticated && (
+              <div className="flex items-center space-x-2 border-l border-border pl-4">
+                <Link href="/account">
+                  <Button variant="ghost" size="sm" data-testid="button-account">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Account
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={async () => {
+                    const { getSupabase } = await import('@/lib/supabase');
+                    const supabase = await getSupabase();
+                    await supabase.auth.signOut();
+                    window.location.href = '/';
+                  }}
+                  data-testid="button-logout-header"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Log Out
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
