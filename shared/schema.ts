@@ -75,6 +75,7 @@ export const qaInteractions = pgTable("qa_interactions", {
   question: text("question").notNull(),
   answer: text("answer").notNull(),
   citations: jsonb("citations"),
+  confidence: integer("confidence"), // 0-100 percentage
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 

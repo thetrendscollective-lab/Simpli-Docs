@@ -511,7 +511,8 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
         documentId: id,
         question,
         answer: result.answer,
-        citations: result.citations
+        citations: result.citations,
+        confidence: Math.round(result.confidence * 100)
       });
 
       await storage.createQA(qaData);
