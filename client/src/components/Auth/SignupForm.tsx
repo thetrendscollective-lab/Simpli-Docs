@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { queryClient } from '@/lib/queryClient';
 
 interface SignupFormProps {
   onSuccess?: () => void;
@@ -69,6 +70,9 @@ export default function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormPro
       // Check if we have an active session (email confirmation might be required)
       if (data.session) {
         // Session active - user can proceed immediately
+        // Invalidate auth cache to force refetch with new session
+        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        
         toast({
           title: 'Account created!',
           description: 'Welcome to Simpli-Docs!',
