@@ -27,12 +27,12 @@ export default function Auth() {
     const redirectAfterLogin = sessionStorage.getItem('redirectAfterLogin');
     if (redirectAfterLogin) {
       sessionStorage.removeItem('redirectAfterLogin');
-      navigate(redirectAfterLogin);
+      window.location.href = redirectAfterLogin;
       return;
     }
     
     const redirect = searchParams.get('redirect') || '/upload';
-    navigate(redirect);
+    window.location.href = redirect;
   };
 
   return (
