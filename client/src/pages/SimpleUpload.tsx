@@ -279,10 +279,17 @@ export default function SimpleUpload() {
             <p className="text-slate-600 dark:text-slate-400">
               Transform complex documents into clear, understandable language
             </p>
-            {usage && (
+            {currentPlan === 'free' && usage && (
               <div className="mt-4 inline-block" data-testid="usage-counter">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Free documents: <span className="font-semibold">{usage.remaining}/{usage.limit}</span> remaining this month
+                </p>
+              </div>
+            )}
+            {currentPlan !== 'free' && (
+              <div className="mt-4 inline-block" data-testid="unlimited-badge">
+                <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                  ✨ Unlimited documents
                 </p>
               </div>
             )}
