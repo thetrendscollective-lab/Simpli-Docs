@@ -67,25 +67,37 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
             planTier = 'family';
           }
 
-          // Safely convert timestamp to Date
-          const periodEndTimestamp = subscription.current_period_end;
-          const periodEndDate = periodEndTimestamp ? new Date(periodEndTimestamp * 1000) : undefined;
-          
-          // Validate the date before saving
-          if (periodEndDate && isNaN(periodEndDate.getTime())) {
-            console.error(`Invalid date for subscription period end: ${periodEndTimestamp}`);
-          }
+          // Safely parse Stripe timestamp - Stripe returns Unix timestamp in seconds
+          const parseStripeTimestamp = (value: any): Date | null => {
+            // Check if value exists and is a valid number
+            if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+              console.warn(`Invalid Stripe timestamp received: ${value}`);
+              return null;
+            }
+            const date = new Date(value * 1000); // Convert seconds to milliseconds
+            return !isNaN(date.getTime()) ? date : null;
+          };
 
-          // Update user with subscription details
-          await storage.upsertUser({
+          const periodEndDate = parseStripeTimestamp(subscription.current_period_end);
+          
+          console.log(`Processing webhook for user ${userId}: plan=${planTier}, periodEnd=${periodEndDate?.toISOString() || 'null'}`);
+
+          // Build update data - only include currentPeriodEnd if we have a valid date
+          const updateData: any = {
             id: userId,
             stripeCustomerId: session.customer as string,
             subscriptionStatus: subscription.status,
             currentPlan: planTier,
-            currentPeriodEnd: (periodEndDate && !isNaN(periodEndDate.getTime())) ? periodEndDate : undefined,
-          });
+          };
+          
+          // Only add currentPeriodEnd if we have a valid date
+          if (periodEndDate) {
+            updateData.currentPeriodEnd = periodEndDate;
+          }
 
-          console.log(`Subscription linked to user ${userId}: ${planTier}`);
+          await storage.upsertUser(updateData);
+
+          console.log(`✅ Subscription successfully linked to user ${userId}: ${planTier}`);
         }
         break;
       }
