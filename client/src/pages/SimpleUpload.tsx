@@ -76,10 +76,16 @@ export default function SimpleUpload() {
       form.append("language", language);
       
       // Get authentication token
+      console.log('🔑 Getting access token for upload...');
       const token = await getAccessToken();
+      console.log('🔑 Token result:', token ? 'TOKEN FOUND' : 'NO TOKEN');
+      console.log('🔑 Token length:', token?.length || 0);
+      console.log('🔑 User from useAuth:', user);
+      console.log('🔑 isAuthenticated:', isAuthenticated);
       
       // If no token, redirect to auth page
       if (!token) {
+        console.error('❌ No token available for upload');
         setError("Please log in to upload documents");
         sessionStorage.setItem('redirectAfterLogin', '/upload');
         setTimeout(() => {
@@ -87,6 +93,8 @@ export default function SimpleUpload() {
         }, 2000);
         return;
       }
+      
+      console.log('✅ Token ready, submitting upload...');
       
       const resp = await fetch("/api/process", {
         method: "POST",
