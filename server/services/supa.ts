@@ -3,10 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 // Server-side Supabase client with service role (for admin operations)
 let supabase: any = null;
 
-if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE) {
   supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    process.env.SUPABASE_SERVICE_ROLE,
     {
       auth: {
         autoRefreshToken: false,
