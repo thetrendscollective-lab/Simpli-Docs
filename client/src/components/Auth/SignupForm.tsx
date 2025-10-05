@@ -70,12 +70,6 @@ export default function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormPro
       // Check if we have an active session (email confirmation might be required)
       if (data.session) {
         // Session active - user can proceed immediately
-        // Force refetch auth data and wait for it to complete
-        await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
-        
-        // Give React time to update the UI with fresh auth state
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
         toast({
           title: 'Account created!',
           description: 'Welcome to Simpli-Docs!',
