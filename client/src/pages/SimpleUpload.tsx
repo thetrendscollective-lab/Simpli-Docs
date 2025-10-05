@@ -78,11 +78,21 @@ export default function SimpleUpload() {
       // Get authentication token
       const token = await getAccessToken();
       
+      // If no token, redirect to auth page
+      if (!token) {
+        setError("Please log in to upload documents");
+        sessionStorage.setItem('redirectAfterLogin', '/upload');
+        setTimeout(() => {
+          window.location.href = '/auth';
+        }, 2000);
+        return;
+      }
+      
       const resp = await fetch("/api/process", {
         method: "POST",
-        headers: token ? {
+        headers: {
           'Authorization': `Bearer ${token}`
-        } : {},
+        },
         body: form
       });
 
@@ -94,6 +104,16 @@ export default function SimpleUpload() {
       }
 
       const data = await resp.json();
+      
+      // Handle unauthorized - session expired
+      if (resp.status === 401) {
+        setError("Your session has expired. Please log in again.");
+        sessionStorage.setItem('redirectAfterLogin', '/upload');
+        setTimeout(() => {
+          window.location.href = '/auth';
+        }, 2000);
+        return;
+      }
       
       // Handle limit reached
       if (resp.status === 429) {
