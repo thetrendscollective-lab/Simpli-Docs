@@ -35,6 +35,9 @@ export default function LoginForm({ onSuccess, onSwitchToSignup }: LoginFormProp
 
       // Force refetch auth data and wait for it to complete
       await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
+      
+      // Give React time to update the UI with fresh auth state
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       toast({
         title: 'Welcome back!',
