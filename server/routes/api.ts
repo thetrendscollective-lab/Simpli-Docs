@@ -77,6 +77,19 @@ router.post('/process', upload.single('file'), async (req, res) => {
       const result = await documentProcessor.extractTextFromPDF(buf);
       text = result.text || '';
       console.log(`PDF extraction complete: ${text.length} characters`);
+      
+      // If PDF extraction yielded minimal text, it's likely a scanned document - use OCR
+      const cleanedText = text.replace(/--- Page \d+ ---/g, '').trim();
+      if (cleanedText.length < 100) {
+        console.log('PDF appears to be scanned (minimal text extracted). Running OCR...');
+        try {
+          text = await ocrService.extractTextFromImage(buf, 'application/pdf');
+          console.log(`OCR complete: ${text.length} characters`);
+        } catch (ocrError) {
+          console.error('OCR fallback failed:', ocrError);
+          // Keep the minimal text from PDF extraction
+        }
+      }
     } else if (mime.includes('word') || mime.includes('docx') || mime.includes('document')) {
       console.log('Extracting DOCX text...');
       text = await documentProcessor.extractTextFromDOCX(buf);
