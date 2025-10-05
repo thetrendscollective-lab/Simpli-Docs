@@ -20,15 +20,15 @@ export default function Account() {
     if (!authLoading && !isAuthenticated) {
       toast({
         title: "Unauthorized",
-        description: "Please log in to view your account.",
+        description: "You are logged out. Logging in again...",
         variant: "destructive",
       });
       setTimeout(() => {
-        navigate("/auth");
+        window.location.href = "/api/login";
       }, 500);
       return;
     }
-  }, [isAuthenticated, authLoading, toast, navigate]);
+  }, [isAuthenticated, authLoading, toast]);
 
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["/api/auth/user"],
@@ -38,18 +38,9 @@ export default function Account() {
 
   const portalMutation = useMutation({
     mutationFn: async () => {
-      const token = await (await import('@/lib/supabase')).getAccessToken();
-      
-      if (!token) {
-        throw new Error('401: Unauthorized');
-      }
-      
       const res = await fetch('/api/stripe/create-portal-session', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
       
       if (res.status === 401) {
@@ -67,11 +58,11 @@ export default function Account() {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
-          description: "Please log in again.",
+          description: "You are logged out. Logging in again...",
           variant: "destructive",
         });
         setTimeout(() => {
-          navigate("/auth");
+          window.location.href = "/api/login";
         }, 500);
         return;
       }

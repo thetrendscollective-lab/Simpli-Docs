@@ -1,6 +1,6 @@
 # Overview
 
-Simpli-Docs (formerly Plain-Language Doc Explainer) is a web application that transforms complex legal and medical documents into clear, understandable explanations. **Authentication is required for all document processing** - users must create a free account before uploading any documents. The application provides plain-language summaries, technical term definitions, and an interactive Q&A interface with confidence scores. The system supports multilingual output, features a specialized Insurance Bill Analyzer (EOB) for Pro users, and includes Google Calendar integration for deadline management. The application emphasizes privacy and safety with clear disclaimers.
+Plain-Language Doc Explainer is a web application that transforms complex legal and medical documents into clear, understandable explanations. Users can upload documents in various formats (PDF, DOCX, TXT, PNG, JPG), and the application provides plain-language summaries, technical term definitions, and an interactive Q&A interface. The system supports multilingual output and emphasizes privacy and safety disclaimers.
 
 # User Preferences
 
@@ -33,9 +33,6 @@ The backend uses Express.js with TypeScript, following a service-oriented archit
 - **DocumentProcessor**: Handles text extraction from PDF, DOCX, and plain text files
 - **OCRService**: Processes scanned images and documents using Tesseract.js
 - **OpenAIService**: Manages AI-powered summarization, glossary generation, and Q&A functionality
-- **LanguageDetectionService**: Automatically detects document language for multilingual support
-- **EOBDetectionService**: Identifies Explanation of Benefits (medical insurance bill) documents
-- **EOBExtractionService**: Extracts structured financial data from EOB documents using OpenAI
 - **Storage**: Abstracts data persistence with both in-memory and database implementations
 
 **API Design:**
@@ -43,19 +40,15 @@ The backend uses Express.js with TypeScript, following a service-oriented archit
 - Session-based document management for privacy
 - Multer middleware for file upload handling with type validation
 - Error handling middleware with structured responses
-- Specialized EOB endpoints for CSV export and appeal letter generation (Pro/Family only)
-- Authentication middleware with plan-based access control
 
 ## Data Storage Solutions
 
 The application uses a hybrid storage approach with Drizzle ORM for type-safe database operations:
 
 **Database Schema:**
-- **Users**: Replit Auth integration with Stripe subscription tracking (currentPlan, subscriptionStatus)
-- **Documents**: Stores document metadata, processed text, summaries, glossaries, detected language, document type, and EOB data
+- **Users**: Basic authentication (currently unused in main flow)
+- **Documents**: Stores document metadata, processed text, summaries, and glossaries
 - **QA Interactions**: Tracks question-answer pairs with citations and confidence scores
-- **Subscriptions**: Tracks Stripe subscription details and billing cycles
-- **UsageTracking**: Monitors free tier usage limits by IP address
 
 **Storage Strategy:**
 - PostgreSQL for production data persistence
@@ -65,54 +58,19 @@ The application uses a hybrid storage approach with Drizzle ORM for type-safe da
 
 ## Authentication and Authorization
 
-**Mandatory Account Creation (October 2025)**: All users must create a free account before uploading or processing any documents. The application uses Supabase Auth for user authentication with Stripe-based subscription management. Features are tiered based on subscription plans (Free, Standard, Pro, Family).
-
-**Authentication Flow:**
-1. Unauthenticated users visiting /upload see a "Create Free Account" card with:
-   - Clear explanation of free tier benefits (2 docs/month, AI summaries, glossaries, Q&A)
-   - "Create Free Account" button directing to /auth
-   - Sign in link for existing users
-2. After authentication, users can access the document upload interface
-3. All document upload/processing API routes require valid Supabase authentication token
-4. Landing page CTAs direct unauthenticated users to sign up before accessing features
-
-**Subscription Tiers:**
-- **Free**: 2 documents/month, English-only output
-- **Standard ($4.99/mo)**: Unlimited docs, 21-language support, reading level selection
-- **Pro ($9.99/mo)**: All Standard features + Insurance Bill Analyzer (EOB), deadline tracking, exports
-- **Family ($14.99/mo)**: Pro features for multiple family members
-
-**Subscription Flow (October 2025):**
-- User clicks upgrade → authenticates with Supabase if needed
-- Creates Stripe checkout session with userId in metadata
-- After payment, Stripe webhook updates user's subscription in database
-- BillingSuccess page verifies authentication and polls for subscription activation
-- Shows loading state while webhook processes (max 20 seconds)
-- Only allows access to features once subscription is confirmed
-- Handles both test and production Stripe price IDs
+Currently implements a session-based approach without user authentication for the main document processing flow. The system generates temporary session IDs for document association and cleanup.
 
 **Security Measures:**
-- Supabase Auth with JWT-based session management
-- Plan-based feature gating (middleware enforcement)
-- Document ownership verification (userId-based access control)
-- File type validation and size limits (25MB max)
+- File type validation and size limits
+- Temporary session management
 - Automatic cleanup of processed documents
-- Secure storage of sensitive EOB data with ownership tracking
 - Privacy-first design with prominent disclaimers
-
-**EOB Security:**
-- Pro/Family plan required for EOB detection and processing
-- Documents stored with userId as sessionId for ownership tracking
-- Export endpoints verify authentication AND document ownership
-- Prevents cross-user data access even with UUID guessing attacks
 
 ## External Dependencies
 
 ### Third-Party Services
-- **OpenAI API**: Powers document summarization, glossary generation, Q&A, language detection, and EOB extraction using GPT-4o and GPT-4o-mini models
+- **OpenAI API**: Powers document summarization, glossary generation, and Q&A functionality using GPT models
 - **Neon Database**: Serverless PostgreSQL for production data storage
-- **Stripe**: Payment processing and subscription management for tiered plans
-- **Replit Auth**: User authentication and session management
 
 ### Key Libraries
 - **PDF Processing**: pdf.js for client-side PDF text extraction
@@ -128,82 +86,3 @@ The application uses a hybrid storage approach with Drizzle ORM for type-safe da
 - **Tailwind CSS**: Utility-first styling framework
 
 The architecture prioritizes privacy, accessibility, and user experience while maintaining clear separation of concerns between document processing, AI integration, and user interface components.
-
-## Key Features
-
-### Calendar Integration for Deadlines (October 2025)
-AI automatically extracts dates and deadlines from action items in documents. Users can add these deadlines directly to their Google Calendar with one click.
-
-**Features:**
-- AI extracts dates (YYYY-MM-DD) and times (HH:MM) from action items
-- Action items stored with structured date/time data
-- "Add to Calendar" buttons appear for items with dates
-- Integration with Google Calendar via Replit connector
-- Events created with reminders (1 day before + 30 min before)
-
-**Technical Implementation:**
-- Enhanced AI prompt to extract dates from action item text
-- Database: `actionItems` JSONB field stores `{task, date, time}` objects
-- Service: `CalendarService` using Google Calendar API v3
-- Endpoint: POST `/api/calendar/add-to-calendar`
-- Frontend: Calendar buttons in SummaryTab Recommendations section
-- Date display: badges show dates alongside action items
-
-**User Experience:**
-- SimpleUpload page: Shows action items with date badges
-- SummaryTab: Shows "Add to Calendar" buttons for dated items
-- Button states: "Add to Calendar" → "Added ✓"
-- Error handling for unconnected calendars
-
-### Automatic Language Detection (October 2025)
-- Automatically detects document language using OpenAI with 21-language support
-- Returns confidence percentage for detection accuracy
-- Paid users (Standard+) receive explanations in detected language automatically
-- Free users always receive English output with upgrade prompts
-- Manual language selection overrides automatic detection
-
-### Insurance Bill Analyzer (EOB) - Pro Feature (October 2025)
-Specialized feature for Pro and Family subscribers that transforms complex medical insurance bills (Explanation of Benefits) into clear, actionable insights.
-
-**Detection & Extraction:**
-- Automatic EOB detection using keyword analysis with confidence scoring
-- Structured data extraction: payer info, member details, claim numbers, service dates
-- Line-item parsing: procedure codes (CPT/HCPCS), diagnosis codes (ICD), billed/allowed/paid amounts
-- Patient responsibility breakdown: deductible, copay, coinsurance, not covered amounts
-
-**Financial Analysis:**
-- Plain-language cost summary (e.g., "You owe $84.12 because $50 applied to deductible + $34.12 coinsurance")
-- Visual cost breakdown chart showing insurance paid vs patient responsibility
-- Automatic financial calculations and totals
-
-**Issue Detection:**
-- Duplicate billing identification
-- Denial detection with reasons
-- Out-of-network service alerts
-- High-cost warnings
-- Potential savings calculations for each issue
-
-**Export Features:**
-- CSV export of all line items with financial summary
-- AI-generated appeal letters for denied or disputed claims
-- One-click downloads for record keeping
-
-**Security:**
-- Pro/Family plan enforcement at all levels (detection, extraction, storage, export)
-- Secure document storage with userId-based ownership tracking
-- Export endpoints verify authentication and document ownership
-- No cross-user data access possible
-
-**User Experience:**
-- Clear "Insurance Bill Analyzer" branding (avoiding technical jargon like "EOB")
-- Visual cost breakdown with color-coded charts
-- Severity-based issue alerts (high/medium/low)
-- Comprehensive service details table
-- Export actions clearly labeled
-
-**Technical Implementation:**
-- Detection: keyword-based with 40+ EOB-specific terms
-- Extraction: OpenAI GPT-4o for structured data extraction
-- Storage: JSONB field in documents table for flexible EOB data structure
-- API: Dedicated /api/eob endpoints for exports with middleware protection
-- UI: EOBAnalyzer component with visual charts and interactive elements

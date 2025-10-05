@@ -1,6 +1,6 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import Stripe from 'stripe';
-import { authenticateSupabase, AuthUser } from '../middleware/supabaseAuth';
+import { isAuthenticated } from '../replitAuth';
 import { storage } from '../storage';
 import { getStripe } from '../stripe';
 
@@ -27,7 +27,7 @@ router.get('/prices', async (req, res) => {
   });
 });
 
-router.post('/create-checkout-session', authenticateSupabase, async (req: Request, res: Response) => {
+router.post('/create-checkout-session', isAuthenticated, async (req: any, res) => {
   try {
     const { priceId } = req.body;
     if (!priceId) return res.status(400).json({ error: 'Missing priceId' });
@@ -36,23 +36,18 @@ router.post('/create-checkout-session', authenticateSupabase, async (req: Reques
     const keyPrefix = process.env.STRIPE_SECRET_KEY?.substring(0, 7);
     console.log(`Creating checkout with key type: ${keyPrefix}, priceId: ${priceId}`);
 
-    const authUser = (req as any).user as AuthUser;
-    if (!authUser) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
+    const userId = req.user.claims.sub;
+    const userEmail = req.user.claims.email;
+    const user = await storage.getUser(userId);
 
-    const userId = authUser.id;
-    const userEmail = authUser.email;
-    const dbUser = await storage.getUser(userId);
-
-    if (!dbUser) {
+    if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     const origin = req.headers.origin || `http://localhost:5000`;
 
     // Create or retrieve Stripe customer
-    let customerId = dbUser.stripeCustomerId;
+    let customerId = user.stripeCustomerId;
     
     if (!customerId) {
       const stripe = getStripe();
@@ -96,17 +91,12 @@ router.post('/create-checkout-session', authenticateSupabase, async (req: Reques
 });
 
 // Stripe Customer Portal - for managing subscriptions
-router.post('/create-portal-session', authenticateSupabase, async (req: Request, res: Response) => {
+router.post('/create-portal-session', isAuthenticated, async (req: any, res) => {
   try {
-    const authUser = (req as any).user as AuthUser;
-    if (!authUser) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
+    const userId = req.user.claims.sub;
+    const user = await storage.getUser(userId);
 
-    const userId = authUser.id;
-    const dbUser = await storage.getUser(userId);
-
-    if (!dbUser?.stripeCustomerId) {
+    if (!user?.stripeCustomerId) {
       return res.status(404).json({ error: 'No active subscription found' });
     }
 
@@ -114,7 +104,7 @@ router.post('/create-portal-session', authenticateSupabase, async (req: Request,
 
     const stripe = getStripe();
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: dbUser.stripeCustomerId,
+      customer: user.stripeCustomerId,
       return_url: `${origin}/account`,
     });
 
@@ -127,33 +117,5 @@ router.post('/create-portal-session', authenticateSupabase, async (req: Request,
 
 // Note: Webhook is handled in server/index.ts before express.json middleware
 // to preserve raw body for Stripe signature verification
-
-router.get('/user/profile', authenticateSupabase, async (req: Request, res: Response) => {
-  try {
-    const authUser = (req as any).user as AuthUser;
-    if (!authUser) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    const userId = authUser.id;
-    const dbUser = await storage.getUser(userId);
-
-    if (!dbUser) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json({
-      id: dbUser.id,
-      email: dbUser.email,
-      currentPlan: dbUser.currentPlan || 'free',
-      subscriptionStatus: dbUser.subscriptionStatus,
-      stripeCustomerId: dbUser.stripeCustomerId,
-      currentPeriodEnd: dbUser.currentPeriodEnd
-    });
-  } catch (e: any) {
-    console.error('Error fetching user profile:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
 
 export default router;

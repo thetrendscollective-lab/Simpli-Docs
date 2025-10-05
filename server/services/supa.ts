@@ -1,22 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Server-side Supabase client with service role (for admin operations)
+// Make Supabase optional if environment variables are missing
 let supabase: any = null;
 
 if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE) {
   supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
+    process.env.SUPABASE_SERVICE_ROLE
   );
-  console.log("✅ Supabase Admin client initialized");
 } else {
-  console.warn("⚠️  Supabase environment variables not found. Authentication will not work.");
+  console.warn("Supabase environment variables not found. Free trial feature will be disabled.");
 }
 
 export { supabase };

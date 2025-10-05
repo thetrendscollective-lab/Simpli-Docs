@@ -7,23 +7,9 @@ import DisclaimerBanner from "@/components/DisclaimerBanner";
 import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
 import { handleUpgrade } from "@/lib/handleUpgrade";
 import { useAuth } from "@/hooks/useAuth";
-import { EOBAnalyzer } from "@/components/EOBAnalyzer";
-import type { EOBData } from "@shared/schema";
-import { getAccessToken } from "@/lib/supabase";
-import { queryClient } from "@/lib/queryClient";
 
 export default function SimpleUpload() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
-  
-  // Debug auth state on mount
-  useEffect(() => {
-    console.log('🔐 SimpleUpload Auth State:', {
-      user,
-      isAuthenticated,
-      authLoading,
-      currentPlan: user?.currentPlan
-    });
-  }, [user, isAuthenticated, authLoading]);
   const [result, setResult] = useState<{
     summary: string;
     keyPoints: string[];
@@ -35,9 +21,6 @@ export default function SimpleUpload() {
     detectedLanguageName?: string;
     confidence?: number;
     outputLanguage?: string;
-    documentType?: string;
-    eobData?: EOBData;
-    documentId?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,14 +45,7 @@ export default function SimpleUpload() {
   useEffect(() => {
     async function fetchUsage() {
       try {
-        const token = await getAccessToken();
-        const headers: HeadersInit = {};
-        
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        const resp = await fetch('/api/usage', { headers });
+        const resp = await fetch('/api/usage');
         if (resp.ok) {
           const data = await resp.json();
           setUsage(data);
@@ -92,33 +68,8 @@ export default function SimpleUpload() {
       form.append("file", file);
       form.append("level", level);
       form.append("language", language);
-      
-      // Get authentication token
-      console.log('🔑 Getting access token for upload...');
-      const token = await getAccessToken();
-      console.log('🔑 Token result:', token ? 'TOKEN FOUND' : 'NO TOKEN');
-      console.log('🔑 Token length:', token?.length || 0);
-      console.log('🔑 User from useAuth:', user);
-      console.log('🔑 isAuthenticated:', isAuthenticated);
-      
-      // If no token, redirect to auth page
-      if (!token) {
-        console.error('❌ No token available for upload');
-        setError("Please log in to upload documents");
-        sessionStorage.setItem('redirectAfterLogin', '/upload');
-        setTimeout(() => {
-          window.location.href = '/auth';
-        }, 2000);
-        return;
-      }
-      
-      console.log('✅ Token ready, submitting upload...');
-      
       const resp = await fetch("/api/process", {
         method: "POST",
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: form
       });
 
@@ -131,16 +82,6 @@ export default function SimpleUpload() {
 
       const data = await resp.json();
       
-      // Handle unauthorized - session expired
-      if (resp.status === 401) {
-        setError("Your session has expired. Please log in again.");
-        sessionStorage.setItem('redirectAfterLogin', '/upload');
-        setTimeout(() => {
-          window.location.href = '/auth';
-        }, 2000);
-        return;
-      }
-      
       // Handle limit reached
       if (resp.status === 429) {
         setError(data.message || "You've reached your monthly limit");
@@ -150,8 +91,7 @@ export default function SimpleUpload() {
       }
       
       if (!resp.ok) {
-        // Use the detailed message if available, otherwise fall back to error
-        throw new Error(data.message || data.error || `Upload failed with status ${resp.status}`);
+        throw new Error(data.error || `Upload failed with status ${resp.status}`);
       }
 
       setResult({
@@ -189,31 +129,9 @@ export default function SimpleUpload() {
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('📁 File input changed!');
     const file = e.target.files?.[0];
-    console.log('📁 File selected:', file?.name || 'NO FILE');
     if (file) {
-      console.log('📁 Calling uploadFile...');
       uploadFile(file);
-    } else {
-      console.log('❌ No file found in input');
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      const { getSupabase } = await import('@/lib/supabase');
-      const supabase = await getSupabase();
-      await supabase.auth.signOut();
-      
-      // Clear React Query cache to force UI update
-      queryClient.clear();
-      
-      // Redirect to home page
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Logout error:', error);
-      alert('Failed to log out. Please try again.');
     }
   };
 
@@ -242,22 +160,21 @@ export default function SimpleUpload() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleLogout}
+                    onClick={() => window.location.href = '/api/logout'}
                     data-testid="button-logout-nav"
                   >
                     Log Out
                   </Button>
                 </>
               ) : (
-                <Link to="/auth">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    data-testid="button-login-nav"
-                  >
-                    Log In
-                  </Button>
-                </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.location.href = '/api/login'}
+                  data-testid="button-login-nav"
+                >
+                  Log In
+                </Button>
               )}
             </div>
           </div>
@@ -280,17 +197,10 @@ export default function SimpleUpload() {
             <p className="text-slate-600 dark:text-slate-400">
               Transform complex documents into clear, understandable language
             </p>
-            {currentPlan === 'free' && usage && (
+            {usage && (
               <div className="mt-4 inline-block" data-testid="usage-counter">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Free documents: <span className="font-semibold">{usage.remaining}/{usage.limit}</span> remaining this month
-                </p>
-              </div>
-            )}
-            {currentPlan !== 'free' && (
-              <div className="mt-4 inline-block" data-testid="unlimited-badge">
-                <p className="text-sm font-semibold text-green-600 dark:text-green-400">
-                  ✨ Unlimited documents
                 </p>
               </div>
             )}
@@ -492,15 +402,6 @@ export default function SimpleUpload() {
                 )}
               </div>
             )}
-            
-            {/* EOB Analyzer for Pro users with EOB documents */}
-            {result.eobData && (
-              <div data-testid="eob-analyzer-container">
-                <EOBAnalyzer eobData={result.eobData} documentId={result.documentId} />
-              </div>
-            )}
-            
-            {/* Standard document results */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -560,20 +461,11 @@ export default function SimpleUpload() {
               <CardContent>
                 {result.actionItems.length > 0 ? (
                   <ul className="list-disc pl-6 space-y-2" data-testid="list-actionitems">
-                    {result.actionItems.map((a: any, i: number) => {
-                      const task = typeof a === 'string' ? a : a.task;
-                      const hasDate = a.date && a.date !== null;
-                      return (
-                        <li key={i} className="text-slate-700 dark:text-slate-300 flex items-center justify-between gap-2">
-                          <span>{task}</span>
-                          {hasDate && (
-                            <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded whitespace-nowrap">
-                              {a.date}{a.time ? ` ${a.time}` : ''}
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
+                    {result.actionItems.map((a, i) => (
+                      <li key={i} className="text-slate-700 dark:text-slate-300">
+                        {a}
+                      </li>
+                    ))}
                   </ul>
                 ) : (
                   <p className="text-slate-500 dark:text-slate-400">No action items.</p>
