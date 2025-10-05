@@ -191,6 +191,18 @@ export default function SimpleUpload() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      const { getSupabase } = await import('@/lib/supabase');
+      const supabase = await getSupabase();
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+      alert('Failed to log out. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <DisclaimerBanner />
@@ -216,7 +228,7 @@ export default function SimpleUpload() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => window.location.href = '/api/logout'}
+                    onClick={handleLogout}
                     data-testid="button-logout-nav"
                   >
                     Log Out
