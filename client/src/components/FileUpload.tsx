@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/lib/utils";
-import { getAccessToken } from "@/lib/supabase";
 
 interface FileUploadProps {
   sessionId: string;
@@ -65,11 +64,6 @@ export default function FileUpload({
     onUploadStart();
 
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Please sign in to upload documents');
-      }
-
       const formData = new FormData();
       formData.append('file', file);
       formData.append('sessionId', sessionId);
@@ -77,9 +71,6 @@ export default function FileUpload({
 
       const response = await fetch('/api/documents/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: formData,
       });
 

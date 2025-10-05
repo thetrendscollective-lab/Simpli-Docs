@@ -39,12 +39,8 @@ export default function LandingPage() {
 
   const handleSubscribe = async (tier: string | null) => {
     if (!tier) {
-      // Free tier - redirect to auth if not logged in, otherwise go to upload
-      if (isAuthenticated) {
-        window.location.href = '/upload';
-      } else {
-        window.location.href = '/auth';
-      }
+      // Free tier - just go to upload page
+      window.location.href = '/upload';
       return;
     }
 
@@ -59,47 +55,91 @@ export default function LandingPage() {
 
   const features = [
     {
-      category: "Smart AI Analysis",
-      icon: <Sparkles className="h-6 w-6" />,
-      color: "bg-pink-500",
-      items: [
-        "AI-powered document analysis",
-        "Plain-language summaries at 3 reading levels",
-        "Intelligent glossary of complex terms",
-        "OCR for scanned documents & images"
-      ]
-    },
-    {
-      category: "Interactive Q&A", 
-      icon: <MessageCircle className="h-6 w-6" />,
+      category: "Understand at a Glance",
+      icon: <Eye className="h-6 w-6" />,
       color: "bg-blue-500",
       items: [
-        "Ask questions about your document",
-        "AI answers with direct citations",
-        "Confidence scores for every answer",
-        "Multi-format support: PDF, DOCX, TXT, images"
+        "Highlight-to-Explain: instant plain-language popovers", 
+        "Reading level dropdown: Simple / Standard / Professional",
+        "Confidence & source chips with document quotes",
+        "Clear explanations of complex terms"
       ]
     },
     {
-      category: "Insurance Bill Analyzer (Pro)",
+      category: "Actionable Guidance", 
+      icon: <Target className="h-6 w-6" />,
+      color: "bg-green-500",
+      items: [
+        "Deadline detector with countdown & calendar integration",
+        "Smart Q&A with grounded citations",
+        "One-click templates: appeals, emails, record requests",
+        "Automated checklist generation from deadlines"
+      ]
+    },
+    {
+      category: "Medical & Insurance Bills",
       icon: <Heart className="h-6 w-6" />,
       color: "bg-red-500", 
       items: [
-        "See exactly what you owe and why",
-        "Duplicate billing detection",
-        "Financial breakdown charts",
-        "Export to CSV or generate appeal letters"
+        "Insurance Bill Analyzer - see what you owe & why (EOB)",
+        "Plain-language medical code definitions (ICD/CPT)",
+        "Duplicate billing alerts & appeal deadline tracking",
+        "Doctor visit prep: smart questions to ask"
       ]
     },
     {
-      category: "Language & Accessibility",
-      icon: <Globe className="h-6 w-6" />,
+      category: "Legal Document Clarity",
+      icon: <BookOpen className="h-6 w-6" />,
+      color: "bg-purple-500",
+      items: [
+        "Parties, jurisdiction & deadlines panel",
+        "Clause snapshots: compress & expand details", 
+        "Form finder: official forms matching your document",
+        "Response clocks for legal deadlines"
+      ]
+    },
+    {
+      category: "Trust & Privacy",
+      icon: <Shield className="h-6 w-6" />,
+      color: "bg-orange-500",
+      items: [
+        "Ephemeral Mode: auto-delete after 24 hours",
+        "Share-safe links: time-limited & revocable",
+        "PII-gentle previews with smart blurring",
+        "SOC 2, HIPAA & GDPR compliant processing"
+      ]
+    },
+    {
+      category: "Accessibility & Language",
+      icon: <Accessibility className="h-6 w-6" />,
       color: "bg-indigo-500",
       items: [
-        "Automatic language detection",
-        "21-language translation support",
-        "Adjustable reading levels",
-        "Dark mode for comfortable reading"
+        "Read-aloud for summaries (Web Speech API)",
+        "Dyslexia-friendly mode with font/spacing",
+        "Translate + explain (21 languages supported)",
+        "High-contrast mode for visual accessibility"
+      ]
+    },
+    {
+      category: "Workflow & Export",
+      icon: <Download className="h-6 w-6" />,
+      color: "bg-teal-500", 
+      items: [
+        "Case Binder: group docs into timeline",
+        "One-click branded PDF exports",
+        "CSV export of action items & deadlines",
+        "Notes & bookmarks with personal annotations"
+      ]
+    },
+    {
+      category: "Smart Processing",
+      icon: <Sparkles className="h-6 w-6" />,
+      color: "bg-pink-500",
+      items: [
+        "AI-powered document analysis with GPT-4o",
+        "OCR for scanned documents & images", 
+        "Multi-format support: PDF, DOCX, TXT, images",
+        "Intelligent glossary generation"
       ]
     }
   ];
@@ -112,9 +152,9 @@ export default function LandingPage() {
       description: "Perfect for trying out Simpli-Docs",
       features: [
         "2 documents per month",
-        "AI summaries & glossaries", 
-        "Q&A with confidence scores",
-        "English output only"
+        "Basic explanations", 
+        "Standard glossary",
+        "Email support"
       ],
       cta: "Start Free",
       popular: false
@@ -124,13 +164,13 @@ export default function LandingPage() {
       tier: "standard",
       price: "$4.99",
       period: "/month",
-      description: "For individuals who need unlimited access",
+      description: "For individuals and small teams",
       features: [
-        "Unlimited documents",
-        "All 3 reading levels (Simple/Standard/Professional)",
-        "21-language translation support",
-        "Automatic language detection",
-        "Priority email support"
+        "Unlimited explanations",
+        "Deadline → calendar integration", 
+        "Read-aloud functionality",
+        "21-language translation",
+        "Priority support"
       ],
       cta: "Start Standard",
       popular: true
@@ -140,14 +180,14 @@ export default function LandingPage() {
       tier: "pro",
       price: "$9.99", 
       period: "/month",
-      description: "For medical bills and complex documents",
+      description: "For power users and professionals",
       features: [
         "Everything in Standard",
-        "Insurance Bill Analyzer (EOB)",
-        "Duplicate billing detection",
-        "Financial breakdown charts",
-        "CSV exports & appeal letters",
-        "Priority support"
+        "Medical bill analyzer with cost breakdown",
+        "Legal deadline clocks",
+        "Case binder & timeline",
+        "Share-safe links",
+        "Branded PDF exports"
       ],
       cta: "Start Pro", 
       popular: false
@@ -157,13 +197,13 @@ export default function LandingPage() {
       tier: "family",
       price: "$14.99",
       period: "/month", 
-      description: "Pro features at a family-friendly price",
+      description: "For families and caregivers",
       features: [
         "Everything in Pro",
-        "Best value for households",
-        "Manage multiple family medical bills",
-        "Unlimited document processing",
-        "Dedicated family support"
+        "3-5 user seats",
+        "Shared case binder",
+        "Family member access",
+        "Caregiver dashboard"
       ],
       cta: "Start Family",
       popular: false
@@ -203,12 +243,7 @@ export default function LandingPage() {
                   </Link>
                   <Button
                     variant="ghost"
-                    onClick={async () => {
-                      const { getSupabase } = await import('@/lib/supabase');
-                      const supabase = await getSupabase();
-                      await supabase.auth.signOut();
-                      window.location.href = '/';
-                    }}
+                    onClick={() => window.location.href = '/api/logout'}
                     data-testid="button-logout-header"
                   >
                     Log Out
@@ -216,17 +251,16 @@ export default function LandingPage() {
                 </>
               ) : (
                 <>
-                  <Link to="/auth">
-                    <Button
-                      variant="ghost"
-                      data-testid="button-login"
-                    >
-                      Log In
-                    </Button>
-                  </Link>
-                  <Link to="/auth">
+                  <Button
+                    variant="ghost"
+                    onClick={() => window.location.href = '/api/login'}
+                    data-testid="button-login"
+                  >
+                    Log In
+                  </Button>
+                  <Link to="/upload">
                     <Button variant="outline" data-testid="button-try-now">
-                      Sign Up Free
+                      Try Now
                     </Button>
                   </Link>
                 </>
@@ -256,9 +290,9 @@ export default function LandingPage() {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Link to={isAuthenticated ? "/upload" : "/auth"}>
+            <Link to="/upload">
               <Button size="lg" className="text-lg px-8 py-6" data-testid="button-start-free">
-                {isAuthenticated ? "Go to Dashboard" : "Create Free Account"}
+                Start Free - No Credit Card Required
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
@@ -292,9 +326,9 @@ export default function LandingPage() {
                         We're preparing an interactive demo to show you exactly how Simpli-Docs works.
                         For now, try uploading a document to see the magic happen!
                       </p>
-                      <Link to={isAuthenticated ? "/upload" : "/auth"}>
+                      <Link to="/upload">
                         <Button size="lg" className="text-lg px-6" onClick={() => setIsDemoOpen(false)}>
-                          {isAuthenticated ? "Upload Your Document" : "Create Account to Upload"}
+                          Try It Now - Upload Your Document
                           <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
                       </Link>
@@ -367,9 +401,9 @@ export default function LandingPage() {
                       Upload your document and experience the power of AI-driven document understanding
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <Link to={isAuthenticated ? "/upload" : "/auth"}>
+                      <Link to="/upload">
                         <Button size="lg" className="w-full sm:w-auto" onClick={() => setIsDemoOpen(false)}>
-                          {isAuthenticated ? "Start Free Trial" : "Create Free Account"}
+                          Start Free Trial
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                       </Link>
@@ -386,16 +420,20 @@ export default function LandingPage() {
           {/* Trust Indicators */}
           <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-muted-foreground mb-16">
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              PDF, DOCX, Images & More
+              <Shield className="h-4 w-4" />
+              SOC 2 Compliant
+            </div>
+            <div className="flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              HIPAA Secure
             </div>
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              21 Languages Supported
+              GDPR Compliant
             </div>
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4" />
-              Instant Results
+              <Star className="h-4 w-4" />
+              99.9% Uptime
             </div>
           </div>
         </div>
@@ -558,9 +596,9 @@ export default function LandingPage() {
             Join thousands who've made complex documents simple with Simpli-Docs
           </p>
           
-          <Link to={isAuthenticated ? "/upload" : "/auth"}>
+          <Link to="/upload">
             <Button size="lg" className="text-lg px-8 py-6" data-testid="button-get-started">
-              {isAuthenticated ? "Get Started" : "Create Free Account"}
+              Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>

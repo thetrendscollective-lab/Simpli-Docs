@@ -119,34 +119,18 @@ export default function QASidebar({ documentId, language, sessionId }: QASidebar
             </div>
             <div className="bg-muted rounded-lg p-3">
               <p className="text-sm text-foreground mb-2">{qa.answer}</p>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {qa.confidence !== null && qa.confidence !== undefined && (
-                  <span 
-                    className={`inline-block text-xs px-2 py-1 rounded font-medium ${
-                      qa.confidence >= 80 
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
-                        : qa.confidence >= 60 
-                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                        : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                    }`}
-                    data-testid={`confidence-${index}`}
-                  >
-                    {qa.confidence}% confident
-                  </span>
-                )}
-                {Array.isArray(qa.citations) && qa.citations.length > 0 && (
-                  <>
-                    {qa.citations.map((citation: any, citIndex: number) => (
-                      <span 
-                        key={citIndex}
-                        className="inline-block bg-primary/20 text-primary text-xs px-2 py-1 rounded"
-                      >
-                        Page {citation.pageNumber}
-                      </span>
-                    ))}
-                  </>
-                )}
-              </div>
+              {Array.isArray(qa.citations) && qa.citations.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {qa.citations.map((citation: any, citIndex: number) => (
+                    <span 
+                      key={citIndex}
+                      className="inline-block bg-primary/20 text-primary text-xs px-2 py-1 rounded"
+                    >
+                      Page {citation.pageNumber}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}

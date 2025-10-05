@@ -8,8 +8,6 @@ import { postExplain, getExplanation } from "./routes/explain";
 import docsRouter from "./routes/docs";
 import apiRouter from "./routes/api";
 import stripeRouter from "./routes/stripe";
-import eobRouter from "./routes/eob";
-import calendarRouter from "./routes/calendar";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { OpenAIService } from "./services/openai";
@@ -18,7 +16,6 @@ import { insertQASchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { getErrorMessage } from "./utils";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { authenticateSupabase, AuthUser } from "./middleware/supabaseAuth";
 import { getStripe } from "./stripe";
 
 const openaiService = new OpenAIService();
@@ -54,50 +51,29 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
         
         if (userId && session.subscription) {
           const stripe = getStripe();
-          const subscription = await stripe.subscriptions.retrieve(session.subscription as string) as any;
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
           const priceId = subscription.items.data[0]?.price.id;
           
-          // Determine plan tier from price ID (handle both test and production)
+          // Determine plan tier from price ID
           let planTier = 'free';
-          if (priceId === process.env.PRICE_STANDARD || priceId === process.env.TESTING_PRICE_STANDARD) {
+          if (priceId === process.env.PRICE_STANDARD) {
             planTier = 'standard';
-          } else if (priceId === process.env.PRICE_PRO || priceId === process.env.TESTING_PRICE_PRO) {
+          } else if (priceId === process.env.PRICE_PRO) {
             planTier = 'pro';
-          } else if (priceId === process.env.PRICE_FAMILY || priceId === process.env.TESTING_PRICE_FAMILY) {
+          } else if (priceId === process.env.PRICE_FAMILY) {
             planTier = 'family';
           }
 
-          // Safely parse Stripe timestamp - Stripe returns Unix timestamp in seconds
-          const parseStripeTimestamp = (value: any): Date | null => {
-            // Check if value exists and is a valid number
-            if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
-              console.warn(`Invalid Stripe timestamp received: ${value}`);
-              return null;
-            }
-            const date = new Date(value * 1000); // Convert seconds to milliseconds
-            return !isNaN(date.getTime()) ? date : null;
-          };
-
-          const periodEndDate = parseStripeTimestamp(subscription.current_period_end);
-          
-          console.log(`Processing webhook for user ${userId}: plan=${planTier}, periodEnd=${periodEndDate?.toISOString() || 'null'}`);
-
-          // Build update data - only include currentPeriodEnd if we have a valid date
-          const updateData: any = {
+          // Update user with subscription details
+          await storage.upsertUser({
             id: userId,
             stripeCustomerId: session.customer as string,
             subscriptionStatus: subscription.status,
             currentPlan: planTier,
-          };
-          
-          // Only add currentPeriodEnd if we have a valid date
-          if (periodEndDate) {
-            updateData.currentPeriodEnd = periodEndDate;
-          }
+            currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+          });
 
-          await storage.upsertUser(updateData);
-
-          console.log(`✅ Subscription successfully linked to user ${userId}: ${planTier}`);
+          console.log(`Subscription linked to user ${userId}: ${planTier}`);
         }
         break;
       }
@@ -160,26 +136,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Supabase config endpoint (MUST be before Replit Auth and Vite middleware)
-  app.get('/api/config', (req, res) => {
-    res.json({
-      supabaseUrl: process.env.SUPABASE_URL || '',
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
-    });
-  });
-
   // Setup Replit Auth (must be before routes)
   await setupAuth(app);
 
-  // Auth route - using Supabase authentication
-  app.get('/api/auth/user', authenticateSupabase, async (req: any, res) => {
+  // Auth route
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const authUser = req.user as AuthUser;
-      if (!authUser) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-      
-      const user = await storage.getUser(authUser.id);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -187,38 +151,31 @@ app.use((req, res, next) => {
     }
   });
 
-  // Mount the route handlers as specified - all with optional auth for Supabase support
-  app.post("/api/upload/init", authenticateSupabase, uploadInit);
-  app.post("/api/upload/complete", authenticateSupabase, uploadComplete);
-  app.get("/api/docs/:id", authenticateSupabase, getDoc);
-  app.get("/api/docs/:id/text", authenticateSupabase, getDocText);
-  app.post("/api/explain", authenticateSupabase, postExplain);
-  app.get("/api/explanations/:document_id", authenticateSupabase, getExplanation);
-  app.get("/api/docs/latest-id", authenticateSupabase, getLatestDocId);
+  // Mount the route handlers as specified
+  app.post("/api/upload/init", uploadInit);
+  app.post("/api/upload/complete", uploadComplete);
+  app.get("/api/docs/:id", getDoc);
+  app.get("/api/docs/:id/text", getDocText);
+  app.post("/api/explain", postExplain);
+  app.get("/api/explanations/:document_id", getExplanation);
+  app.get("/api/docs/latest-id", getLatestDocId);
 
   // Compatibility route for frontend - maps old endpoint to new handler
-  app.post("/api/documents/upload", authenticateSupabase, uploadComplete);
+  app.post("/api/documents/upload", uploadComplete);
 
-  // Simplified docs upload route - requires authentication
-  app.use("/api/docs", authenticateSupabase, docsRouter);
+  // Simplified docs upload route
+  app.use("/api/docs", docsRouter);
 
-  // Stripe routes (MUST come before /api middleware to allow public /prices endpoint)
+  // Main processing route (consolidated)
+  app.use("/api", apiRouter);
+
+  // Stripe routes
   app.use("/api/stripe", stripeRouter);
 
-  // EOB-specific routes - require authentication
-  app.use("/api/eob", authenticateSupabase, eobRouter);
-
-  // Calendar routes - require authentication
-  app.use("/api/calendar", authenticateSupabase, calendarRouter);
-
-  // Main processing route (consolidated) - requires authentication
-  app.use("/api", authenticateSupabase, apiRouter);
-
-  // Session management - require authentication
-  app.post("/api/session", authenticateSupabase, async (req, res) => {
+  // Session management
+  app.post("/api/session", async (req, res) => {
     try {
-      const authUser = (req as any).user as AuthUser;
-      const sessionId = authUser.id; // Use user ID as session ID for authenticated users
+      const sessionId = randomUUID();
       res.json({ sessionId });
     } catch (error) {
       console.error("Error creating session:", error);
@@ -226,11 +183,71 @@ app.use((req, res, next) => {
     }
   });
 
-  // Note: Stripe subscription checkout is handled by /api/stripe/create-checkout-session
-  // in the stripeRouter (see server/routes/stripe.ts) with proper authentication
+  // Stripe subscription checkout
+  app.post("/api/create-checkout-session", async (req, res) => {
+    try {
+      const { tier } = req.body;
+      
+      console.log('Checkout session request:', { tier });
+      console.log('Environment variables:', {
+        PRICE_STANDARD: process.env.PRICE_STANDARD ? 'set' : 'NOT SET',
+        PRICE_PRO: process.env.PRICE_PRO ? 'set' : 'NOT SET',
+        PRICE_FAMILY: process.env.PRICE_FAMILY ? 'set' : 'NOT SET'
+      });
+      
+      if (!tier) {
+        return res.status(400).json({ error: "Tier is required" });
+      }
 
-  // Document processing routes - Require authentication
-  app.post("/api/documents/:id/summarize", authenticateSupabase, async (req, res) => {
+      // Map tier to environment variable price ID
+      let priceId: string | undefined;
+      switch (tier.toLowerCase()) {
+        case 'standard':
+          priceId = process.env.PRICE_STANDARD;
+          break;
+        case 'pro':
+          priceId = process.env.PRICE_PRO;
+          break;
+        case 'family':
+          priceId = process.env.PRICE_FAMILY;
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid tier. Must be standard, pro, or family" });
+      }
+
+      console.log('Selected price ID for tier', tier, ':', priceId ? 'found' : 'NOT FOUND');
+
+      if (!priceId) {
+        return res.status(500).json({ error: `Price ID not configured for ${tier} tier. Please set PRICE_${tier.toUpperCase()} environment variable.` });
+      }
+
+      const origin = req.headers.origin || `http://localhost:5000`;
+      
+      const stripe = getStripe();
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ 
+        error: "Error creating checkout session: " + getErrorMessage(error) 
+      });
+    }
+  });
+
+  // Document processing routes
+  app.post("/api/documents/:id/summarize", async (req, res) => {
     try {
       const { id } = req.params;
       const { language = 'en' } = req.body;
@@ -280,7 +297,7 @@ app.use((req, res, next) => {
     }
   });
 
-  app.post("/api/documents/:id/regenerate", authenticateSupabase, async (req, res) => {
+  app.post("/api/documents/:id/regenerate", async (req, res) => {
     try {
       const { id } = req.params;
       const { readingLevel = 'standard' } = req.body;
@@ -305,12 +322,13 @@ app.use((req, res, next) => {
       }
 
       // Enforce language restriction: only paid users can use non-English languages
-      const authUser = (req as any).user as AuthUser;
+      const isAuthenticated = !!(req as any).user;
       let currentPlan = 'free';
       
-      if (authUser) {
-        // Get current plan from authenticated user
-        currentPlan = authUser.currentPlan || 'free';
+      if (isAuthenticated) {
+        const userId = (req as any).user.claims.sub;
+        const user = await storage.getUser(userId);
+        currentPlan = user?.currentPlan || 'free';
       }
       
       // Only Standard, Pro, and Family plans can use non-English languages
@@ -446,7 +464,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.post("/api/documents/:id/glossary", authenticateSupabase, async (req, res) => {
+  app.post("/api/documents/:id/glossary", async (req, res) => {
     try {
       const { id } = req.params;
       const { language = 'en' } = req.body;
@@ -494,7 +512,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.post("/api/documents/:id/ask", authenticateSupabase, async (req, res) => {
+  app.post("/api/documents/:id/ask", async (req, res) => {
     try {
       const { id } = req.params;
       const { question, language = 'en' } = req.body;
@@ -540,8 +558,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
         documentId: id,
         question,
         answer: result.answer,
-        citations: result.citations,
-        confidence: Math.round(result.confidence * 100)
+        citations: result.citations
       });
 
       await storage.createQA(qaData);
@@ -555,7 +572,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.get("/api/documents/:id/qa", authenticateSupabase, async (req, res) => {
+  app.get("/api/documents/:id/qa", async (req, res) => {
     try {
       const { id } = req.params;
       const sessionId = req.headers['x-session-id'] as string;
@@ -581,7 +598,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.delete("/api/documents/:id", authenticateSupabase, async (req, res) => {
+  app.delete("/api/documents/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const sessionId = req.headers['x-session-id'] as string;
@@ -611,7 +628,6 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  // Session cleanup - no auth required (sessionId-based access control)
   app.delete("/api/sessions/:sessionId", async (req, res) => {
     try {
       const { sessionId } = req.params;
@@ -623,8 +639,8 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  // Payment routes - Optional auth (sessionId-based access)
-  app.post("/api/create-payment-intent", authenticateSupabase, async (req, res) => {
+  // Payment routes
+  app.post("/api/create-payment-intent", async (req, res) => {
     try {
       const { documentId } = req.body;
       const sessionId = req.headers['x-session-id'] as string;
@@ -677,7 +693,7 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     }
   });
 
-  app.post("/api/documents/:documentId/verify-payment", authenticateSupabase, async (req, res) => {
+  app.post("/api/documents/:documentId/verify-payment", async (req, res) => {
     try {
       const { documentId } = req.params;
       const sessionId = req.headers['x-session-id'] as string;

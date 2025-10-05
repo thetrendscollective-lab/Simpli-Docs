@@ -56,7 +56,6 @@ export const documents = pgTable("documents", {
   processedSections: jsonb("processed_sections"),
   summary: text("summary"),
   glossary: jsonb("glossary"),
-  actionItems: jsonb("action_items"), // Array of {task: string, date: string|null, time: string|null}
   language: text("language").default("en"),
   detectedLanguage: text("detected_language"),
   confidence: integer("confidence"), // 0-100 percentage
@@ -76,7 +75,6 @@ export const qaInteractions = pgTable("qa_interactions", {
   question: text("question").notNull(),
   answer: text("answer").notNull(),
   citations: jsonb("citations"),
-  confidence: integer("confidence"), // 0-100 percentage
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 

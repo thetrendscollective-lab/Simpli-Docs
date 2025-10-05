@@ -77,23 +77,6 @@ router.post('/process', upload.single('file'), async (req, res) => {
       const result = await documentProcessor.extractTextFromPDF(buf);
       text = result.text || '';
       console.log(`PDF extraction complete: ${text.length} characters`);
-      
-      // If PDF extraction yielded minimal text, it's likely a scanned document - use OCR
-      const cleanedText = text.replace(/--- Page \d+ ---/g, '').trim();
-      if (cleanedText.length < 100) {
-        console.log('PDF appears to be scanned (minimal text extracted). Running OCR...');
-        try {
-          text = await ocrService.extractTextFromScannedPDF(buf);
-          console.log(`OCR complete: ${text.length} characters`);
-        } catch (ocrError) {
-          console.error('OCR fallback failed:', ocrError);
-          // Return helpful error message
-          return res.status(422).json({ 
-            error: 'Unable to process scanned PDF',
-            message: 'This document cannot be processed as a PDF. Please take a photo of the document with your phone camera (or screenshot it on your computer) and upload it as a JPG or PNG image instead.'
-          });
-        }
-      }
     } else if (mime.includes('word') || mime.includes('docx') || mime.includes('document')) {
       console.log('Extracting DOCX text...');
       text = await documentProcessor.extractTextFromDOCX(buf);
@@ -131,22 +114,13 @@ router.post('/process', upload.single('file'), async (req, res) => {
     }
 
     // Determine output language based on user input, detection, and subscription
-    const authUser = (req as any).user as any;
-    const isAuthenticated = !!authUser;
+    const isAuthenticated = !!(req as any).user;
     let currentPlan = 'free';
-    let userId: string | null = null;
     
-    if (isAuthenticated && authUser.id) {
-      // Supabase auth
-      userId = authUser.id;
-      currentPlan = authUser.currentPlan || 'free';
-    } else if (isAuthenticated && authUser.claims?.sub) {
-      // Replit auth (legacy fallback)
-      userId = authUser.claims.sub;
-      if (userId) {
-        const user = await storage.getUser(userId);
-        currentPlan = user?.currentPlan || 'free';
-      }
+    if (isAuthenticated) {
+      const userId = (req as any).user.claims.sub;
+      const user = await storage.getUser(userId);
+      currentPlan = user?.currentPlan || 'free';
     }
 
     // Language selection priority:
@@ -163,13 +137,12 @@ router.post('/process', upload.single('file'), async (req, res) => {
 
     console.log(`Output language: ${outputLanguage}, Detected: ${detectedLanguage} (${confidence}% confidence)`);
 
-    // EOB Detection and Extraction for Pro/Family users ONLY
+    // EOB Detection and Extraction for Pro users
     let eobData = null;
     let documentType = 'general';
     
-    // Enforce Pro/Family plan requirement for EOB analysis
-    if (isAuthenticated && (currentPlan === 'pro' || currentPlan === 'family')) {
-      console.log('User has Pro/Family plan, checking if document is an EOB...');
+    if (currentPlan === 'pro' || currentPlan === 'family') {
+      console.log('Checking if document is an EOB...');
       const eobDetection = eobDetectionService.detectEOB(text);
       
       if (eobDetection.isEOB) {
@@ -186,10 +159,6 @@ router.post('/process', upload.single('file'), async (req, res) => {
       } else {
         console.log(`Document is not an EOB (${eobDetection.confidence}% confidence)`);
       }
-    } else if (!isAuthenticated) {
-      console.log('User not authenticated, skipping EOB detection');
-    } else {
-      console.log(`User plan '${currentPlan}' does not have EOB analyzer access (Pro/Family only)`);
     }
 
     // Check if OpenAI API key is available
@@ -280,11 +249,9 @@ Return strict JSON with this shape:
   "summary": "120-200 words executive summary at the specified reading level",
   "keyPoints": ["3-7 concise bullets"],
   "glossary": [{"term":"...","definition":"..."}],
-  "actionItems": [{"task":"actionable step","date":"YYYY-MM-DD or null","time":"HH:MM or null"}],
+  "actionItems": ["actionable next steps"],
   "readingLevelUsed": "${level}"
 }
-
-IMPORTANT: For actionItems, extract any dates/deadlines mentioned in the document. If an action has a specific date mentioned (e.g., "respond by January 15", "payment due March 1"), include it in ISO format (YYYY-MM-DD). If a time is mentioned, include it as HH:MM in 24-hour format. If no date/time is mentioned for an action, use null.
 
 CRITICAL OUTPUT LANGUAGE REQUIREMENT:
 - ALL output (summary, keyPoints, glossary definitions, actionItems) MUST be in ${languageName}.
@@ -343,23 +310,11 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
       }));
     }
 
-    // Normalize action items to always have task, date, and time fields
-    const normalizedActionItems = (parsed.actionItems || parsed.action_items || []).map((item: any) => {
-      if (typeof item === 'string') {
-        return { task: item, date: null, time: null };
-      }
-      return {
-        task: item.task || item,
-        date: item.date || null,
-        time: item.time || null
-      };
-    });
-
     const result = {
       summary: parsed.summary || '',
       keyPoints: parsed.keyPoints || parsed.key_points || [],
       glossary: Array.isArray(parsed.glossary) ? parsed.glossary : [],
-      actionItems: normalizedActionItems,
+      actionItems: parsed.actionItems || parsed.action_items || [],
       readingLevelUsed: parsed.readingLevelUsed || level,
       raw: rawResponse
     };
@@ -367,39 +322,6 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
     // Increment usage count after successful processing
     await storage.incrementUsage(clientIP);
     const updatedUsage = await storage.checkUsageLimit(clientIP, MONTHLY_FREE_LIMIT);
-    
-    // Store EOB documents for later retrieval (CSV export, appeal generation)
-    // SECURITY: Only store if user is authenticated and has Pro/Family plan
-    let documentId: string | undefined;
-    if (eobData && documentType === 'eob' && isAuthenticated && userId && (currentPlan === 'pro' || currentPlan === 'family')) {
-      try {
-        // Use userId as sessionId for secure document ownership tracking
-        const storedDoc = await storage.createDocument({
-          sessionId: userId, // Store with userId to verify ownership later
-          filename: fileName,
-          fileType: mime,
-          fileSize: req.file.size,
-          originalText: text,
-          summary: result.summary,
-          glossary: result.glossary,
-          actionItems: result.actionItems,
-          language: outputLanguage,
-          detectedLanguage,
-          confidence,
-          documentType,
-          eobData: eobData as any,
-          processedSections: null,
-          pageCount: 1,
-          paymentAmount: null,
-          paymentStatus: 'pending',
-          stripePaymentIntentId: null
-        });
-        documentId = storedDoc.id;
-        console.log(`EOB document stored with ID: ${documentId} for user: ${userId}`);
-      } catch (error) {
-        console.error('Failed to store EOB document:', error);
-      }
-    }
     
     console.log('Processing complete, sending response with', result.keyPoints.length, 'key points at', level, 'level');
     console.log(`Usage: ${MONTHLY_FREE_LIMIT - updatedUsage.remaining}/${MONTHLY_FREE_LIMIT}, Remaining: ${updatedUsage.remaining}`);
@@ -412,7 +334,6 @@ Format your response as JSON with these exact keys: summary (string), keyPoints 
       outputLanguage,
       documentType,
       eobData,
-      documentId,
       usage: {
         remaining: updatedUsage.remaining,
         limit: MONTHLY_FREE_LIMIT
@@ -441,48 +362,5 @@ router.get('/usage', async (req, res) => {
     res.status(500).json({ error: 'Failed to check usage' });
   }
 });
-
-// TEST ENDPOINT: Update user plan for testing (development only)
-// This endpoint allows test automation to set user plans without going through Stripe
-if (process.env.NODE_ENV === 'development') {
-  router.post('/test-update-user-plan', async (req, res) => {
-    try {
-      const { userId, currentPlan } = req.body;
-      
-      if (!userId || !currentPlan) {
-        return res.status(400).json({ error: 'userId and currentPlan are required' });
-      }
-      
-      // Validate plan
-      const validPlans = ['free', 'standard', 'pro', 'family'];
-      if (!validPlans.includes(currentPlan)) {
-        return res.status(400).json({ error: 'Invalid plan. Must be one of: free, standard, pro, family' });
-      }
-      
-      // Upsert user with plan (creates if doesn't exist, updates if exists)
-      const user = await storage.upsertUser({
-        id: userId,
-        email: `test-${userId}@example.com`,
-        currentPlan: currentPlan as 'free' | 'standard' | 'pro' | 'family',
-        subscriptionStatus: 'active'
-      });
-      
-      console.log(`[TEST] Set user ${userId} plan to ${currentPlan}`);
-      
-      res.json({ 
-        success: true, 
-        userId, 
-        currentPlan,
-        subscriptionStatus: user.subscriptionStatus,
-        message: 'User plan updated successfully' 
-      });
-    } catch (e: any) {
-      console.error('[TEST] Update user plan error:', e);
-      res.status(500).json({ error: e.message || 'Failed to update user plan' });
-    }
-  });
-  
-  console.log('[TEST] Test endpoint /api/test-update-user-plan enabled in development mode');
-}
 
 export default router;

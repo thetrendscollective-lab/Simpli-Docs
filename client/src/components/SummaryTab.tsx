@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Tooltip from "@/components/Tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { type Document } from "@shared/schema";
-import { FileText, Languages, AlertCircle, ChevronRight, Calendar, Check } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { FileText, Languages, AlertCircle, ChevronRight } from "lucide-react";
 
 interface SummaryTabProps {
   documentId: string;
@@ -27,8 +25,6 @@ interface DocumentSummary {
 export default function SummaryTab({ documentId, language, sessionId, regeneratedContent }: SummaryTabProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [sideBySideView, setSideBySideView] = useState(false);
-  const [addedToCalendar, setAddedToCalendar] = useState<Set<number>>(new Set());
-  const { toast } = useToast();
 
   const { data: summary, isLoading } = useQuery({
     queryKey: ["/api/documents", documentId, "summary", language, sessionId],
@@ -80,47 +76,6 @@ export default function SummaryTab({ documentId, language, sessionId, regenerate
     }
     setExpandedSections(newExpanded);
   };
-
-  const addToCalendarMutation = useMutation({
-    mutationFn: async (item: { task: string; date: string; time?: string; index: number }) => {
-      const response = await fetch('/api/calendar/add-to-calendar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          task: item.task,
-          date: item.date,
-          time: item.time,
-          description: `Action item from document: ${documentId}`
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to add to calendar');
-      }
-      
-      return await response.json();
-    },
-    onSuccess: (_, variables) => {
-      const newAdded = new Set(addedToCalendar);
-      newAdded.add(variables.index);
-      setAddedToCalendar(newAdded);
-      toast({
-        title: "Added to Calendar",
-        description: "Event has been added to your Google Calendar",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to add to calendar",
-        description: error.message || "Please connect your Google Calendar in settings",
-        variant: "destructive"
-      });
-    }
-  });
 
   if (isLoading) {
     return (
@@ -234,53 +189,13 @@ export default function SummaryTab({ documentId, language, sessionId, regenerate
             </button>
             {expandedSections.has('recommendations') && (
               <div className="p-4 pt-0 border-t border-border">
-                <ul className="space-y-3 text-foreground">
-                  {displaySummary.recommendations.map((recommendation: any, index: number) => {
-                    const hasDate = recommendation.date && recommendation.date !== null;
-                    const actionText = typeof recommendation === 'string' ? recommendation : recommendation.task;
-                    const isAdded = addedToCalendar.has(index);
-                    
-                    return (
-                      <li key={index} className="flex items-start space-x-2">
-                        <span className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></span>
-                        <div className="flex-1 flex items-start justify-between gap-3">
-                          <span className="flex-1">{actionText}</span>
-                          {hasDate && (
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                                {recommendation.date}{recommendation.time ? ` ${recommendation.time}` : ''}
-                              </span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => addToCalendarMutation.mutate({ 
-                                  task: actionText, 
-                                  date: recommendation.date, 
-                                  time: recommendation.time,
-                                  index 
-                                })}
-                                disabled={addToCalendarMutation.isPending || isAdded}
-                                className="h-7 px-2"
-                                data-testid={`button-add-calendar-${index}`}
-                              >
-                                {isAdded ? (
-                                  <>
-                                    <Check className="h-3 w-3 mr-1" />
-                                    Added
-                                  </>
-                                ) : (
-                                  <>
-                                    <Calendar className="h-3 w-3 mr-1" />
-                                    Add to Calendar
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
+                <ul className="space-y-2 text-foreground">
+                  {displaySummary.recommendations.map((recommendation, index) => (
+                    <li key={index} className="flex items-start space-x-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></span>
+                      <span>{recommendation}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
