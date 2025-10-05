@@ -150,7 +150,8 @@ export default function SimpleUpload() {
       }
       
       if (!resp.ok) {
-        throw new Error(data.error || `Upload failed with status ${resp.status}`);
+        // Use the detailed message if available, otherwise fall back to error
+        throw new Error(data.message || data.error || `Upload failed with status ${resp.status}`);
       }
 
       setResult({
