@@ -63,7 +63,7 @@ export default function LandingPage() {
       icon: <Sparkles className="h-6 w-6" />,
       color: "bg-pink-500",
       items: [
-        "AI-powered document analysis with GPT-4o",
+        "AI-powered document analysis",
         "Plain-language summaries at 3 reading levels",
         "Intelligent glossary of complex terms",
         "OCR for scanned documents & images"
@@ -385,10 +385,6 @@ export default function LandingPage() {
 
           {/* Trust Indicators */}
           <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-muted-foreground mb-16">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              Powered by GPT-4o
-            </div>
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               PDF, DOCX, Images & More
