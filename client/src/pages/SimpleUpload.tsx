@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { EOBAnalyzer } from "@/components/EOBAnalyzer";
 import type { EOBData } from "@shared/schema";
 import { getAccessToken } from "@/lib/supabase";
+import { queryClient } from "@/lib/queryClient";
 
 export default function SimpleUpload() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
@@ -203,6 +204,11 @@ export default function SimpleUpload() {
       const { getSupabase } = await import('@/lib/supabase');
       const supabase = await getSupabase();
       await supabase.auth.signOut();
+      
+      // Clear React Query cache to force UI update
+      queryClient.clear();
+      
+      // Redirect to home page
       window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
