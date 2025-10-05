@@ -90,7 +90,7 @@ router.post('/process', upload.single('file'), async (req, res) => {
           // Return helpful error message
           return res.status(422).json({ 
             error: 'Unable to process scanned PDF',
-            message: 'This PDF appears to be a scanned image. For best results, please take a screenshot of the document and upload it as a PNG or JPG file instead.'
+            message: 'This document cannot be processed as a PDF. Please take a photo of the document with your phone camera (or screenshot it on your computer) and upload it as a JPG or PNG image instead.'
           });
         }
       }
