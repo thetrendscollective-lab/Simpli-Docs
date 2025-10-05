@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { queryClient } from '@/lib/queryClient';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -31,6 +32,9 @@ export default function LoginForm({ onSuccess, onSwitchToSignup }: LoginFormProp
       });
 
       if (error) throw error;
+
+      // Invalidate auth cache to force refetch with new session
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
 
       toast({
         title: 'Welcome back!',
