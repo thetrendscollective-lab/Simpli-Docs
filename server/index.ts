@@ -181,8 +181,8 @@ app.use((req, res, next) => {
   // Simplified docs upload route - requires authentication
   app.use("/api/docs", authenticateSupabase, docsRouter);
 
-  // Main processing route (consolidated) - requires authentication
-  app.use("/api", authenticateSupabase, apiRouter);
+  // Stripe routes (MUST come before /api middleware to allow public /prices endpoint)
+  app.use("/api/stripe", stripeRouter);
 
   // EOB-specific routes - require authentication
   app.use("/api/eob", authenticateSupabase, eobRouter);
@@ -190,8 +190,8 @@ app.use((req, res, next) => {
   // Calendar routes - require authentication
   app.use("/api/calendar", authenticateSupabase, calendarRouter);
 
-  // Stripe routes
-  app.use("/api/stripe", stripeRouter);
+  // Main processing route (consolidated) - requires authentication
+  app.use("/api", authenticateSupabase, apiRouter);
 
   // Session management - require authentication
   app.post("/api/session", authenticateSupabase, async (req, res) => {
