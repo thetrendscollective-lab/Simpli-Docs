@@ -184,37 +184,6 @@ app.use((req, res, next) => {
   // Stripe routes (MUST come before /api middleware to allow public /prices endpoint)
   app.use("/api/stripe", stripeRouter);
 
-  // EMERGENCY FIX: Manual subscription activation (development only)
-  if (process.env.NODE_ENV === 'development') {
-    app.post("/api/emergency-activate-subscription", async (req, res) => {
-      try {
-        const { userId, plan } = req.body;
-        
-        if (!userId || !plan) {
-          return res.status(400).json({ error: 'userId and plan are required' });
-        }
-        
-        const validPlans = ['free', 'standard', 'pro', 'family'];
-        if (!validPlans.includes(plan)) {
-          return res.status(400).json({ error: 'Invalid plan' });
-        }
-        
-        await storage.upsertUser({
-          id: userId,
-          currentPlan: plan as 'free' | 'standard' | 'pro' | 'family',
-          subscriptionStatus: 'active'
-        });
-        
-        console.log(`✅ EMERGENCY: Activated ${plan} subscription for user ${userId}`);
-        
-        res.json({ success: true, message: `${plan} subscription activated` });
-      } catch (e: any) {
-        console.error('Emergency activation error:', e);
-        res.status(500).json({ error: e.message });
-      }
-    });
-  }
-
   // EOB-specific routes - require authentication
   app.use("/api/eob", authenticateSupabase, eobRouter);
 
