@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import logoPath from "@assets/Simpli-Docs Logo Design_1759342904379.png";
 import { getCurrentUser } from "@/lib/supabase";
+import { queryClient } from "@/lib/queryClient";
 
 export default function BillingSuccess() {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -50,6 +51,10 @@ export default function BillingSuccess() {
             const userData = await response.json();
             
             if (userData.currentPlan && userData.currentPlan !== 'free') {
+              // Invalidate all user-related caches to force refresh
+              await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+              await queryClient.invalidateQueries({ queryKey: ['/api/stripe/user/profile'] });
+              
               setSubscriptionActive(true);
               setVerifying(false);
               return true;
