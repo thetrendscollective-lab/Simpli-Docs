@@ -83,11 +83,15 @@ router.post('/process', upload.single('file'), async (req, res) => {
       if (cleanedText.length < 100) {
         console.log('PDF appears to be scanned (minimal text extracted). Running OCR...');
         try {
-          text = await ocrService.extractTextFromImage(buf, 'application/pdf');
+          text = await ocrService.extractTextFromScannedPDF(buf);
           console.log(`OCR complete: ${text.length} characters`);
         } catch (ocrError) {
           console.error('OCR fallback failed:', ocrError);
-          // Keep the minimal text from PDF extraction
+          // Return helpful error message
+          return res.status(422).json({ 
+            error: 'Unable to process scanned PDF',
+            message: 'This PDF appears to be a scanned image. For best results, please take a screenshot of the document and upload it as a PNG or JPG file instead.'
+          });
         }
       }
     } else if (mime.includes('word') || mime.includes('docx') || mime.includes('document')) {
