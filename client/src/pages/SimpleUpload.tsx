@@ -170,9 +170,14 @@ export default function SimpleUpload() {
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📁 File input changed!');
     const file = e.target.files?.[0];
+    console.log('📁 File selected:', file?.name || 'NO FILE');
     if (file) {
+      console.log('📁 Calling uploadFile...');
       uploadFile(file);
+    } else {
+      console.log('❌ No file found in input');
     }
   };
 
