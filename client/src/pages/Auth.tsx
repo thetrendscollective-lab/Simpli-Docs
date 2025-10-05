@@ -23,6 +23,14 @@ export default function Auth() {
       return; // Don't navigate - handleUpgrade will redirect to Stripe
     }
     
+    // Check for redirect in session storage (from upload page)
+    const redirectAfterLogin = sessionStorage.getItem('redirectAfterLogin');
+    if (redirectAfterLogin) {
+      sessionStorage.removeItem('redirectAfterLogin');
+      navigate(redirectAfterLogin);
+      return;
+    }
+    
     const redirect = searchParams.get('redirect') || '/upload';
     navigate(redirect);
   };
