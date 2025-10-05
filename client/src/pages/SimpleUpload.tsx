@@ -318,18 +318,6 @@ export default function SimpleUpload() {
             </Card>
           )}
 
-          {/* DEBUG PANEL */}
-          <Card className="mb-4 bg-yellow-50 border-yellow-300">
-            <CardContent className="py-4">
-              <div className="text-sm font-mono">
-                <div>🔐 Auth Status: {isAuthenticated ? '✅ LOGGED IN' : '❌ NOT LOGGED IN'}</div>
-                <div>👤 User: {user?.email || 'None'}</div>
-                <div>📋 Plan: {user?.currentPlan || 'None'}</div>
-                <div>⏳ Loading: {authLoading ? 'Yes' : 'No'}</div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="mb-6">
           <CardHeader>
             <CardTitle>Upload Your Document</CardTitle>

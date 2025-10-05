@@ -180,12 +180,6 @@ app.use((req, res, next) => {
       }
       
       const user = await storage.getUser(authUser.id);
-      console.log(`📋 /api/auth/user returning data for ${authUser.email}:`, {
-        id: user?.id,
-        email: user?.email,
-        currentPlan: user?.currentPlan,
-        subscriptionStatus: user?.subscriptionStatus
-      });
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
