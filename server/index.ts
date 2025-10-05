@@ -54,7 +54,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
         
         if (userId && session.subscription) {
           const stripe = getStripe();
-          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string) as any;
           const priceId = subscription.items.data[0]?.price.id;
           
           // Determine plan tier from price ID (handle both test and production)
