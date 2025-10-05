@@ -268,12 +268,18 @@ export class DbStorage implements IStorage {
 
   async upsertUser(userData: UpsertUser): Promise<User> {
     const now = new Date();
+    
+    // Filter out undefined values to avoid DB errors
+    const cleanData = Object.fromEntries(
+      Object.entries(userData).filter(([_, v]) => v !== undefined)
+    );
+    
     const result = await db
       .insert(users)
-      .values({ ...userData, createdAt: now, updatedAt: now })
+      .values({ ...cleanData, createdAt: now, updatedAt: now })
       .onConflictDoUpdate({
         target: users.id,
-        set: { ...userData, updatedAt: now }
+        set: { ...cleanData, updatedAt: now }
       })
       .returning();
     
