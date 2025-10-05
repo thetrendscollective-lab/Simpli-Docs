@@ -9,6 +9,7 @@ import { handleUpgrade } from "@/lib/handleUpgrade";
 import { useAuth } from "@/hooks/useAuth";
 import { EOBAnalyzer } from "@/components/EOBAnalyzer";
 import type { EOBData } from "@shared/schema";
+import { getAccessToken } from "@/lib/supabase";
 
 export default function SimpleUpload() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
@@ -73,8 +74,15 @@ export default function SimpleUpload() {
       form.append("file", file);
       form.append("level", level);
       form.append("language", language);
+      
+      // Get authentication token
+      const token = await getAccessToken();
+      
       const resp = await fetch("/api/process", {
         method: "POST",
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {},
         body: form
       });
 
