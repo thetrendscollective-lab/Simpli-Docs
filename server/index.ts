@@ -67,13 +67,22 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
             planTier = 'family';
           }
 
+          // Safely convert timestamp to Date
+          const periodEndTimestamp = subscription.current_period_end;
+          const periodEndDate = periodEndTimestamp ? new Date(periodEndTimestamp * 1000) : undefined;
+          
+          // Validate the date before saving
+          if (periodEndDate && isNaN(periodEndDate.getTime())) {
+            console.error(`Invalid date for subscription period end: ${periodEndTimestamp}`);
+          }
+
           // Update user with subscription details
           await storage.upsertUser({
             id: userId,
             stripeCustomerId: session.customer as string,
             subscriptionStatus: subscription.status,
             currentPlan: planTier,
-            currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+            currentPeriodEnd: (periodEndDate && !isNaN(periodEndDate.getTime())) ? periodEndDate : undefined,
           });
 
           console.log(`Subscription linked to user ${userId}: ${planTier}`);
