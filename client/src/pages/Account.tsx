@@ -38,9 +38,18 @@ export default function Account() {
 
   const portalMutation = useMutation({
     mutationFn: async () => {
+      const token = await (await import('@/lib/supabase')).getAccessToken();
+      
+      if (!token) {
+        throw new Error('401: Unauthorized');
+      }
+      
       const res = await fetch('/api/stripe/create-portal-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
       });
       
       if (res.status === 401) {
