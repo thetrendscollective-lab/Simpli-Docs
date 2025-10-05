@@ -1,5 +1,8 @@
 import { type User, type UpsertUser, type Document, type InsertDocument, type QAInteraction, type InsertQA, type UsageTracking, type InsertUsageTracking } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { users, documents, qaInteractions, usageTracking } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (IMPORTANT: mandatory for Replit Auth)
@@ -96,6 +99,7 @@ export class MemStorage implements IStorage {
       id,
       summary: doc.summary ?? null,
       glossary: doc.glossary ?? null,
+      actionItems: doc.actionItems ?? null,
       language: doc.language ?? null,
       detectedLanguage: doc.detectedLanguage ?? null,
       confidence: doc.confidence ?? null,
@@ -148,6 +152,7 @@ export class MemStorage implements IStorage {
       id,
       documentId: qa.documentId ?? null,
       citations: qa.citations ?? null,
+      confidence: qa.confidence ?? null,
       createdAt: new Date()
     };
     this.qaInteractions.set(id, interaction);
@@ -255,4 +260,172 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DbStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const now = new Date();
+    const result = await db
+      .insert(users)
+      .values({ ...userData, createdAt: now, updatedAt: now })
+      .onConflictDoUpdate({
+        target: users.id,
+        set: { ...userData, updatedAt: now }
+      })
+      .returning();
+    
+    return result[0];
+  }
+
+  async createDocument(doc: InsertDocument): Promise<Document> {
+    const result = await db.insert(documents).values(doc).returning();
+    return result[0];
+  }
+
+  async getDocument(id: string): Promise<Document | undefined> {
+    const result = await db.select().from(documents).where(eq(documents.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getDocumentsBySession(sessionId: string): Promise<Document[]> {
+    return await db.select().from(documents).where(eq(documents.sessionId, sessionId));
+  }
+
+  async updateDocument(id: string, updates: Partial<Document>): Promise<Document | undefined> {
+    const result = await db
+      .update(documents)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(documents.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async deleteDocument(id: string): Promise<boolean> {
+    const result = await db.delete(documents).where(eq(documents.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async updateDocumentPayment(id: string, paymentData: {
+    stripePaymentIntentId?: string;
+    paymentAmount?: number;
+    paymentStatus?: string;
+  }): Promise<Document | undefined> {
+    return this.updateDocument(id, paymentData);
+  }
+
+  async createQA(qa: InsertQA): Promise<QAInteraction> {
+    const result = await db.insert(qaInteractions).values(qa).returning();
+    return result[0];
+  }
+
+  async getQAByDocument(documentId: string): Promise<QAInteraction[]> {
+    return await db.select().from(qaInteractions).where(eq(qaInteractions.documentId, documentId));
+  }
+
+  async cleanupSession(sessionId: string): Promise<void> {
+    // Delete QA interactions for documents in this session
+    const sessionDocs = await this.getDocumentsBySession(sessionId);
+    for (const doc of sessionDocs) {
+      await db.delete(qaInteractions).where(eq(qaInteractions.documentId, doc.id));
+    }
+    
+    // Delete documents
+    await db.delete(documents).where(eq(documents.sessionId, sessionId));
+  }
+
+  async getLatestDocument(): Promise<Document | undefined> {
+    const result = await db.select().from(documents).orderBy(desc(documents.createdAt)).limit(1);
+    return result[0];
+  }
+
+  async getUsageByIP(ipAddress: string): Promise<UsageTracking | undefined> {
+    const result = await db.select().from(usageTracking).where(eq(usageTracking.ipAddress, ipAddress)).limit(1);
+    return result[0];
+  }
+
+  async incrementUsage(ipAddress: string): Promise<UsageTracking> {
+    const currentDate = new Date();
+    const currentMonthYear = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    const existing = await this.getUsageByIP(ipAddress);
+    
+    if (!existing || existing.monthYear !== currentMonthYear) {
+      // Create new usage record or reset for new month
+      const result = await db
+        .insert(usageTracking)
+        .values({
+          ipAddress,
+          documentCount: 1,
+          monthYear: currentMonthYear,
+          lastResetAt: currentDate,
+          updatedAt: currentDate
+        })
+        .onConflictDoUpdate({
+          target: usageTracking.ipAddress,
+          set: {
+            documentCount: 1,
+            monthYear: currentMonthYear,
+            lastResetAt: currentDate,
+            updatedAt: currentDate
+          }
+        })
+        .returning();
+      
+      return result[0];
+    } else {
+      // Increment existing count
+      const result = await db
+        .update(usageTracking)
+        .set({
+          documentCount: existing.documentCount + 1,
+          updatedAt: currentDate
+        })
+        .where(eq(usageTracking.ipAddress, ipAddress))
+        .returning();
+      
+      return result[0];
+    }
+  }
+
+  async checkUsageLimit(ipAddress: string, monthlyLimit: number): Promise<{ allowed: boolean; remaining: number }> {
+    const currentDate = new Date();
+    const currentMonthYear = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    let usage = await this.getUsageByIP(ipAddress);
+    
+    // If no usage record or it's from a previous month, reset the record
+    if (!usage || usage.monthYear !== currentMonthYear) {
+      await db
+        .insert(usageTracking)
+        .values({
+          ipAddress,
+          documentCount: 0,
+          monthYear: currentMonthYear,
+          lastResetAt: currentDate,
+          updatedAt: currentDate
+        })
+        .onConflictDoUpdate({
+          target: usageTracking.ipAddress,
+          set: {
+            documentCount: 0,
+            monthYear: currentMonthYear,
+            lastResetAt: currentDate,
+            updatedAt: currentDate
+          }
+        });
+      
+      return { allowed: true, remaining: monthlyLimit };
+    }
+    
+    // Check if under limit based on existing usage
+    const remaining = Math.max(0, monthlyLimit - usage.documentCount);
+    return { allowed: usage.documentCount < monthlyLimit, remaining };
+  }
+}
+
+// Use database storage in production, memory storage for testing
+export const storage = process.env.NODE_ENV === 'test' ? new MemStorage() : new DbStorage();
