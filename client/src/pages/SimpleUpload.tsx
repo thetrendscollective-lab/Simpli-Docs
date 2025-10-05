@@ -235,14 +235,15 @@ export default function SimpleUpload() {
                   </Button>
                 </>
               ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => window.location.href = '/api/login'}
-                  data-testid="button-login-nav"
-                >
-                  Log In
-                </Button>
+                <Link to="/auth">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-testid="button-login-nav"
+                  >
+                    Log In
+                  </Button>
+                </Link>
               )}
             </div>
           </div>

@@ -20,15 +20,15 @@ export default function Account() {
     if (!authLoading && !isAuthenticated) {
       toast({
         title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
+        description: "Please log in to view your account.",
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        navigate("/auth");
       }, 500);
       return;
     }
-  }, [isAuthenticated, authLoading, toast]);
+  }, [isAuthenticated, authLoading, toast, navigate]);
 
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["/api/auth/user"],
@@ -58,11 +58,11 @@ export default function Account() {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
+          description: "Please log in again.",
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          navigate("/auth");
         }, 500);
         return;
       }
