@@ -13,6 +13,16 @@ import { getAccessToken } from "@/lib/supabase";
 
 export default function SimpleUpload() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  
+  // Debug auth state on mount
+  useEffect(() => {
+    console.log('🔐 SimpleUpload Auth State:', {
+      user,
+      isAuthenticated,
+      authLoading,
+      currentPlan: user?.currentPlan
+    });
+  }, [user, isAuthenticated, authLoading]);
   const [result, setResult] = useState<{
     summary: string;
     keyPoints: string[];
