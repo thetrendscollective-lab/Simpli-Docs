@@ -33,8 +33,8 @@ export default function LoginForm({ onSuccess, onSwitchToSignup }: LoginFormProp
 
       if (error) throw error;
 
-      // Invalidate auth cache to force refetch with new session
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      // Force refetch auth data and wait for it to complete
+      await queryClient.refetchQueries({ queryKey: ['/api/auth/user'] });
 
       toast({
         title: 'Welcome back!',
