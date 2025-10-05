@@ -61,7 +61,14 @@ export default function SimpleUpload() {
   useEffect(() => {
     async function fetchUsage() {
       try {
-        const resp = await fetch('/api/usage');
+        const token = await getAccessToken();
+        const headers: HeadersInit = {};
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const resp = await fetch('/api/usage', { headers });
         if (resp.ok) {
           const data = await resp.json();
           setUsage(data);
